@@ -327,7 +327,7 @@ if __name__ == '__main__':
                                 Treasure Map Link: {img_link4} \n \
                                 "
 
-                            elif instance["alert_type"] == "UPDATE" and float(notice['area90']) < 600:
+                            elif instance["alert_type"] == "UPDATE" and float(notice['area90']) < 2000:
 
                                 print('This is an update alert, sending less information.')
 
@@ -353,7 +353,7 @@ if __name__ == '__main__':
                                 Treasure Map Link: {img_link4} \n \
                                 "
 
-                            elif instance["alert_type"] != "UPDATE" and float(notice['area90']) < 600:
+                            elif instance["alert_type"] != "UPDATE" and float(notice['area90']) < 2000:
 
                                 print("Notice passes all checks - sending more details:")
 
@@ -520,7 +520,7 @@ if __name__ == '__main__':
                                 Treasure Map Link: {img_link4} \n \
                                 "
 
-                            elif instance["alert_type"] == "UPDATE" and float(notice['area90']) < 600:
+                            elif instance["alert_type"] == "UPDATE" and float(notice['area90']) < 2000:
 
                                 print('This is an update alert, sending less information.')
 
@@ -546,7 +546,7 @@ if __name__ == '__main__':
                                 Treasure Map Link: {img_link4} \n \
                                 "
 
-                            elif instance["alert_type"] != "UPDATE" and float(notice['area90']) < 600:
+                            elif instance["alert_type"] != "UPDATE" and float(notice['area90']) < 2000:
 
                                 print("Notice passes all checks - sending more details:")
 
@@ -710,7 +710,7 @@ if __name__ == '__main__':
                                 Treasure Map Link: {img_link4} \n \
                                 "
 
-                            elif instance["alert_type"] == "UPDATE" and float(notice['area90']) < 500:
+                            elif instance["alert_type"] == "UPDATE" and float(notice['area90']) < 2000:
 
                                 print('This is an update alert, sending less information.')
 
@@ -733,7 +733,7 @@ if __name__ == '__main__':
                                 Treasure Map Link: {img_link4} \n \
                                 "
 
-                            elif instance["alert_type"] != "UPDATE" and float(notice['area90']) < 500:
+                            elif instance["alert_type"] != "UPDATE" and float(notice['area90']) < 2000:
 
                                 print("Notice passes all checks - sending more details:")
 
@@ -745,6 +745,10 @@ if __name__ == '__main__':
                                     ext = 'None... :('
                                     ext_details = 'None'
 
+                                atchannel = ' '
+                                if float(notice['area90']) < 500:
+                                    atchannel = '@channel'
+
                                 #print(has_gap)
                                 #print('hi')
                                 #print(notice['ra_dec'])
@@ -754,7 +758,8 @@ if __name__ == '__main__':
 
                                 # If passes CBC cuts and mock cuts then it creates additional outputs:
                                 # Creating the message text
-                                message_text = f"*Superevent ID: {instance['superevent_id']}* \n \
+                                message_text = f"{atchannel} \n \
+                                *Superevent ID: {instance['superevent_id']}* \n \
                                 Event Time {notice['event_time']} \n \
                                 Notice Time {instance['time_created']} \n \
                                 Event Type: {notice['event_type']}\n \
@@ -885,7 +890,7 @@ if __name__ == '__main__':
                         notice = parse_notice(message.content[0])
                         print("Parsed the notice properly")
 
-                        if float(notice['area90']) < 150 and instance['event']['significant'] != True and instance['event']['classification']['terrestrial'] < 0.4:
+                        if float(notice['area90']) < 250 and instance['event']['significant'] != True and instance['event']['classification']['terrestrial'] < 0.4:
 
                             print("Low Significance Alert")
 
@@ -907,7 +912,12 @@ if __name__ == '__main__':
                                 ext = 'None... :('
                                 ext_details = 'None'
 
-                            message_text = f"*Superevent ID: {instance['superevent_id']}* \n \
+                            atchannel = ' '
+                            if float(notice['area90']) < 150:
+                                atchannel = '@channel'
+
+                            message_text = f"{atchannel} \n \
+                            *Superevent ID: {instance['superevent_id']}* \n \
                             Event Time {notice['event_time']} \n \
                             Notice Time {instance['time_created']} \n \
                             Event Type: {notice['event_type']}\n \
