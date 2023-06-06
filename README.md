@@ -77,20 +77,6 @@ settings:
 
 *TBD*
 
-## Known Issues:
-
-* The current alerts are not real. Thus, there is a fair bit of repetition which causes some of the channel-creation and archiving features to fail. We expect this issue to resolve itself when the engineering run begins. The current alerts are also all BNS mergers and this will change once the science run begins.
-
-* Archiving channels after a retraction is very slow right now and will get slower as the number of channels in a workspace increases (due to linear search). Slack does not currently have api's (that I could find) that can do this efficiently i.e. `O(1)` so we might have to build something on our own. Once again, this depends on having relatively consistent data formatting (like `PRELIMINARY` alerts for any `superevent id` coming in before `RETRACTION` alerts). We hope to iron this out during the engineering run.
-
-## Brendan's To Do:
-
-* Fix channel archiving
-* Run gwemopt automatically to generate pointings for good events
-* Define better event selection criteria
-* Slack button to create new channel for events instead of doing so everytime, because, as mentioned above, this causes things to slow down over time. 
-* Document the selection criteria used and the workflow for channel creation etc...
-
 ## Acknowledgements:
 
 This bot was originally created as part of the collaborative efforts of the Gravity collective. If you do use this project in your work, please acknowledge the original code developers Ved Shah (vedgs2@illinois.edu), Gautham Narayan (gsn@illinois.edu), and the UIUCSN team. This repo also makes use of some code developed by Charlie Kilpatrick (https://github.com/charliekilpatrick/bot) for parsing LVK alerts. 
