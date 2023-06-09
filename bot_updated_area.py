@@ -327,7 +327,7 @@ if __name__ == '__main__':
                                 Treasure Map Link: {img_link4} \n \
                                 "
 
-                            elif instance["alert_type"] == "UPDATE" and float(notice['area90']) < 2000:
+                            elif instance["alert_type"] == "UPDATE":# and float(notice['area90']) < 2000:
 
                                 print('This is an update alert, sending less information.')
 
@@ -353,7 +353,7 @@ if __name__ == '__main__':
                                 Treasure Map Link: {img_link4} \n \
                                 "
 
-                            elif instance["alert_type"] != "UPDATE" and float(notice['area90']) < 2000:
+                            elif instance["alert_type"] != "UPDATE":# and float(notice['area90']) < 2000:
 
                                 print("Notice passes all checks - sending more details:")
 
@@ -520,7 +520,7 @@ if __name__ == '__main__':
                                 Treasure Map Link: {img_link4} \n \
                                 "
 
-                            elif instance["alert_type"] == "UPDATE" and float(notice['area90']) < 2000:
+                            elif instance["alert_type"] == "UPDATE":# and float(notice['area90']) < 2000:
 
                                 print('This is an update alert, sending less information.')
 
@@ -546,7 +546,7 @@ if __name__ == '__main__':
                                 Treasure Map Link: {img_link4} \n \
                                 "
 
-                            elif instance["alert_type"] != "UPDATE" and float(notice['area90']) < 2000:
+                            elif instance["alert_type"] != "UPDATE":# and float(notice['area90']) < 2000:
 
                                 print("Notice passes all checks - sending more details:")
 
@@ -710,7 +710,7 @@ if __name__ == '__main__':
                                 Treasure Map Link: {img_link4} \n \
                                 "
 
-                            elif instance["alert_type"] == "UPDATE" and float(notice['area90']) < 2000:
+                            elif instance["alert_type"] == "UPDATE":# and float(notice['area90']) < 2000:
 
                                 print('This is an update alert, sending less information.')
 
@@ -733,7 +733,7 @@ if __name__ == '__main__':
                                 Treasure Map Link: {img_link4} \n \
                                 "
 
-                            elif instance["alert_type"] != "UPDATE" and float(notice['area90']) < 2000:
+                            elif instance["alert_type"] != "UPDATE":# and float(notice['area90']) < 2000:
 
                                 print("Notice passes all checks - sending more details:")
 
