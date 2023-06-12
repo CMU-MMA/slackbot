@@ -67,15 +67,30 @@ settings:
 * Note: In order for the alerts to post to slack you need the main channel to already exist and need to have actively added the slackbot app to that channel. 
 * Note: The original `bot.py` developed by Ved and Gautham (see acknowledgements) is available through the SCIMMA repo and this fork was edited to add additional capabilities. This file was renamed to `bot_original.py` for record keeping purposes.
 
-## Workflow of the Bot
 
-*TBD*
+## Decision Criteria
 
-1. ...
-2. ...
-3. ...
+*#bns-alert*
 
-*TBD*
+BNS > 0.2 and HasRemnant > 0.015 and terrestrial < 0.2 and significant == True
+
+*#nsbh-alert*
+
+NSBH > 0.2 and HasRemnant > 0.015 and terrestrial < 0.2 and significant == True 
+
+*#bbh-alert*
+
+BBH > 0.7 and significant == True 
+
+*#burst-alert*
+
+group != CBC and significant == True
+
+Note that here significant refers to a FAR of 1 per year. Whereas for CBC events it is 1 per month.
+
+*#low-sig-alerts*
+
+area90 < 250 deg^2 and significant != True and terrestrial < 0.4
 
 ## Acknowledgements:
 
