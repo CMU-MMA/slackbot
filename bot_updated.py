@@ -246,7 +246,7 @@ if __name__ == '__main__':
                         
                         # Setting some preliminary thresholds so that the channel does not get flooded with bad alerts. Adapt based on needs.
                         # Starting with only significant NS and not mock event as the only threshold.
-                        if instance['event']['classification']['BNS'] > 0.2 and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['terrestrial'] < 0.2 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
+                        if instance['event']['classification']['BNS'] > 0.2 and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['Terrestrial'] < 0.2 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
 
                             print("NSNS")
                             #print(instance)
@@ -429,7 +429,7 @@ if __name__ == '__main__':
                             except SlackApiError as e:
                                 print("\nCould not post message. Error: ", e.response["error"])
 
-                        elif instance['event']['classification']['NSBH'] > 0.2 and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['terrestrial'] < 0.2 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
+                        elif instance['event']['classification']['NSBH'] > 0.2 and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['Terrestrial'] < 0.2 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
 
                             print("NSBH")
                             #print(instance)

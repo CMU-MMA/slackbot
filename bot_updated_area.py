@@ -25,7 +25,7 @@ import astropy_healpix as ah
 from hop import Stream
 from hop.io import StartPosition
 import numpy as np
-import healpy as hp
+#import healpy as hp
 from astropy.coordinates import SkyCoord
 from ligo.skymap.moc import uniq2pixarea
 ############################################################
@@ -38,13 +38,13 @@ from ligo.skymap.moc import uniq2pixarea
 #stream = Stream(start_at=StartPosition.EARLIEST)
 
 #Another test using Auth
-#auth = Auth(hop_username, hop_pw)
-#stream = Stream(start_at=StartPosition.EARLIEST)
+auth = Auth(hop_username, hop_pw)
+stream = Stream(start_at=StartPosition.EARLIEST)
 #Could just change the start time instead of doing EARLIEST as a way to test specific event sorting...
 
 #Using Auth 
-auth = Auth(hop_username, hop_pw)
-stream = Stream(auth=auth)
+#auth = Auth(hop_username, hop_pw)
+#stream = Stream(auth=auth)
 
 #Default/Original
 #stream = Stream()
@@ -278,10 +278,18 @@ if __name__ == '__main__':
                         print("Trying...")
 
                         message_text = None
+
+                        #print(instance['event']['classification']['Terrestrial'])
+
+                        best_class = most_likely_classification(instance['event']['classification'])
+                        #print(best_class)
+
+                        #if best_class == 'BBH':
+                        #    print('BBH correct')
                         
                         # Setting some preliminary thresholds so that the channel does not get flooded with bad alerts. Adapt based on needs.
                         # Starting with only significant NS and not mock event as the only threshold.
-                        if instance['event']['classification']['BNS'] > 0.2 and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['terrestrial'] < 0.2 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
+                        if (instance['event']['classification']['BNS'] > 0.15 or best_class == 'BNS') and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M': 
 
                             print("NSNS")
                             #print(instance)
@@ -474,7 +482,7 @@ if __name__ == '__main__':
                             except SlackApiError as e:
                                 print("\nCould not post message. Error: ", e.response["error"])
 
-                        elif instance['event']['classification']['NSBH'] > 0.2 and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['terrestrial'] < 0.2 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
+                        elif (instance['event']['classification']['NSBH'] > 0.15 or best_class == 'NSBH') and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
 
                             print("NSBH")
                             #print(instance)
@@ -662,7 +670,11 @@ if __name__ == '__main__':
                                     print("\nCould not post message. Error: ", e.response["error"])
 
 
-                        elif instance['event']['classification']['BBH'] > 0.7 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
+                        elif best_class == 'BBH' and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M': #instance['event']['classification']['BBH'] > 0.7 and
+
+
+                            #and best_class == 'BBH' 
+                
 
                             print("BBH")
                             #print(instance)
@@ -890,7 +902,7 @@ if __name__ == '__main__':
                         notice = parse_notice(message.content[0])
                         print("Parsed the notice properly")
 
-                        if float(notice['area90']) < 250 and instance['event']['significant'] != True and instance['event']['classification']['terrestrial'] < 0.4:
+                        if float(notice['area90']) < 250 and instance['event']['significant'] != True and instance['event']['classification']['Terrestrial'] < 0.4:
 
                             print("Low Significance Alert")
 

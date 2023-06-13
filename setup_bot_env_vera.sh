@@ -51,6 +51,8 @@ echo "which pip"
 which pip
 #echo "pip install python-ligo-lw"
 #pip install python-ligo-lw
+echo "pip install ligo.skymap==1.0.7 --no-cache-dir"
+pip install ligo.skymap==1.0.7 --no-cache-dir
 echo "pip install gwemopt"
 pip install gwemopt
 echo "pip install aiohttp"
@@ -69,6 +71,14 @@ echo "pip install pyOpenSSL"
 pip install pyOpenSSL
 echo "pip install versioneer==0.28"
 pip install versioneer==0.28
+
+
+#hop setup
+hop auth locate
+hop auth add 
+#username = oconnorb-8dc3d960
+#password = WkAJf6Cdg6ay8Ew9PL44b17tUmq7ESpr
+hop subscribe kafka://kafka.scimma.org/igwn.gwalert
 
 
 echo "conda deactivate"
