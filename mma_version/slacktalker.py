@@ -39,7 +39,7 @@ class slack_bot:
         # If it fails, create #alert-bot-test or similar channel and BE SURE to add the slack bot app to that channel or it cannot send a message to it!
         try:
             print("Trying to send message to ns channel...", end='')
-            response = self.client.chat_postMessage(channel='#bns-alert', text=message_text)
+            response = self.client.chat_postMessage(channel=channel_name, text=message_text)
             print("Done")
         except SlackApiError as e:
             print("\nCould not post message. Error: ", e.response["error"])
@@ -70,21 +70,20 @@ class slack_bot:
                                                     }
                                                 },
                                                 {
-                                                    "type": "section",
-                                                    "text": {
-                                                        "type": "mrkdwn",
-                                                        "text": "This is a section block with a button."
-                                                    },
-                                                    "accessory": {
-                                                        "type": "button",
-                                                        "text": {
-                                                            "type": "plain_text",
-                                                            "text": "Click Me",
-                                                            "emoji": False
-                                                        },
-                                                        "value": "click_me_123",
-                                                        "action_id": "button-action"
-                                                    }
+                                                    "type": "actions",
+                                                    "block_id": "actions1",
+                                                    "elements": 
+                                                    [
+                                                        {
+                                                            "type": "button",
+                                                            "text": {
+                                                                "type": "plain_text",
+                                                                "text": f"Some {title} related action"
+                                                            },
+                                                            "value": "cancel",
+                                                            "action_id": "button_1"
+                                                        }
+                                                    ]
                                                 }
 	                                          ] )
             if verbose: print(response)
