@@ -112,7 +112,7 @@ def determine_relation( gw_data, frb_data, slackbot, logger ):
             logger.info("Does not have skymap")
     else:
         logger.info("The events are NOT within the defined plausible time region")
-        return False
+        return False #For testing so I don't loose all my files!
         # Deleting file outside of the time range (one is guaranteed to be within
         #    as it just triggered)
         filename = None
@@ -121,7 +121,6 @@ def determine_relation( gw_data, frb_data, slackbot, logger ):
             filename = os.path.join("GW_Avros", gw_data['superevent_id']+".avro")
             os.remove(filename)
         else:
-            pass
             # FRB came first (is too old)
             filename = os.path.join("FRB_XMLs", get_xml_filename(frb_data.attrib["ivorn"])+".xml")
             os.remove(filename) 
