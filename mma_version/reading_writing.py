@@ -20,9 +20,12 @@ def get_file_names( GW=True ):
     directory = 'GW_Avros' if GW else "FRB_XMLs"
     #files = [os.path.join(directory, f) for f in os.listdir(directory) if
     #         os.path.isfile(os.path.join(directory, f))]
-    files = [ f for f in os.listdir(directory) if
-             os.path.isfile(os.path.join(directory, f))]
-    return files
+    try:
+        files = [ f for f in os.listdir(directory) if
+                os.path.isfile(os.path.join(directory, f))]
+        return files
+    except FileNotFoundError:
+        return []
 
 def _clear_avros():
     files = get_file_names(GW=True)
@@ -132,7 +135,7 @@ def write_xml_file( event, logger, alerted_slack=False)->str:
                            f"alerted_slack ={alerted_slack}" 
     if not os.path.exists( FRB_DIRECTORY ):
         os.makedirs( FRB_DIRECTORY )
-    file_name = os.path.join( FRB_DIRECTORY, get_xml_filename(event.attrib["ivorn"])+".xml")
+    file_name = os.path.join( FRB_DIRECTORY, get_xml_filename(event.attrib["ivorn"], logger)+".xml" )
 
     lock = lockfile.FilesystemLock(file_name + ".lock")
     lock.lock()

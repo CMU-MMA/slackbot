@@ -2,3 +2,14 @@ slack_token.py
 test.py
 __pycache__/
 .DS_Store
+
+# Saved Data
+FRB_XMLs/
+GW_Avros/
+*.xml 
+*.avro 
+
+# Specific files
+GW_FRB_listener.log
+slack_token.py
+twistd.log

@@ -38,14 +38,6 @@ logger.handlers.append(logging.StreamHandler(sys.stdout))
     
 ############################################################
 
-#Significance criteria: frbs also have an `importance` parameter—the only broadcast events >0.9, but recommend 0.98 to avoid false positives
-'''
-if instance['event']['classification']['BNS'] > 0.5: #and instance['event']['significant'] == True: # && instance['superevent_id'][0] != 'M':
-elif instance['event']['classification']['NSBH'] > 0.5:
-elif instance['event']['classification']['BBH'] > 0.8 and instance['event']['significant']:
-elif instance['event']['classification']['terrestrial'] < 0.05 and instance['event']['significant']:
-'''
-
 
 def compare_to_frbs( message, slackbot ):
     #FRB file names
@@ -94,29 +86,23 @@ def store_file( message ):
         write_avro_file( message, logger )
             
 
-#if __name__ == '__main__':
 def main( message, slackbot ):
 
+    #The filtering of messages is done in the got_general file that calls this,
+    #   so we can immidiately act on anything sent to this file
+
+    #However frbs also have an `importance` parameter—the only broadcast events >0.9,
+    #   but recommend 0.98 to avoid false positives
+    #TODO: talk to Mohit about this?
+
+    
     #slackbot = slack_bot()
 
-    '''
-    auth = Auth("mdm2-6de7a486", "IVNjs29iwjc31npXjYDBlql2GmQTKFfy")                                    
-    #start_pos = StartPosition.EARLIEST                                                                  
-    start_pos = StartPosition.LATEST                                                                   
-    stream = Stream(auth=auth, start_at=start_pos, )#until_eos=True)                                      
-    '''
 
     #TODO: #2 add twistd log to this logger
     logger.info("ADD TWISTD LOGGER TO THIS FILE / FORMAT")
-    logger.info("************ Starting new session ************")
-    '''
-    try:                                                                                                
-        logger.info("Type \"control C\" (^C) to end session") 
-        with stream.open('kafka://kafka.scimma.org/igwn.gwalert', 'r') as s:
-            logger.info("Opened Hop Stream") 
+    #logger.info("************ Starting new session ************")
 
-            for message in s:
-    '''
     logger.info("--------------------")
     logger.info(f"Received LVK Notice with superevent ID {message.content[0]['superevent_id']}")
 

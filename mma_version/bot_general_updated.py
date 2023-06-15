@@ -37,7 +37,7 @@ from hop.io import StartPosition
 import numpy as np
 #import healpy as hp
 from astropy.coordinates import SkyCoord
-from ligo.skymap.moc import uniq2pixarea
+#from ligo.skymap.moc import uniq2pixarea
 ############################################################
 # Run from environment gw-bot
 # conda activate gw-bot
@@ -58,25 +58,28 @@ def most_likely_classification(classification):
 
     return(best_class)
 
-def area_within_probability(data, cumulative):
+def area_within_probability(skymap, cumulative):
+    # Michael: changed this to match code on LIGO website (also my computer has a problem
+    #   finding the package?)
+    #Sort the pixels of the sky map by descending probability density.
+    skymap.sort('PROBDENSITY', reverse=True)
 
-    data.sort('PROBDENSITY')
-    data.reverse()
+    #Find the area of each pixel.
+    level, ipix = ah.uniq_to_level_ipix(skymap['UNIQ'])
+    pixel_area = ah.nside_to_pixel_area(ah.level_to_nside(level))
 
-    total_probability = 0.0
-    total_area = 0.0
-    index = 0
+    #Calculate the probability within each pixel: the pixel area times the probability density.
+    prob = pixel_area * skymap['PROBDENSITY']
 
-    while total_probability < cumulative:
-        area = uniq2pixarea(data['UNIQ'][index])
-        total_probability += data['PROBDENSITY'][index]*area
-        total_area += area
-        index += 1
+    #Calculate the cumulative sum of the probability.
+    cumprob = np.cumsum(prob)
 
-    # Convert to deg^2
-    total_area = total_area * (180.0/np.pi)**2
+    #Find the pixel for which the probability sums to 0.9 (90%).
+    i = cumprob.searchsorted(cumulative)
 
-    return(total_area)
+    #The area of the 90% credible region is simply the sum of the areas of the pixels up to that one.
+    area_90 = pixel_area[:i].sum()
+    return area_90.to_value(u.deg**2)
 
 def parse_notice(record):
     # Michael: maybe move this filtering of mock events to the beginning of the
@@ -239,8 +242,8 @@ def images_for_update( superevent_id ):
 if __name__ == '__main__':
 
     auth = Auth( hop_username, hop_pw )
-    #start_pos = StartPosition.EARLIEST
-    start_pos = StartPosition.LATEST                                                                   
+    start_pos = StartPosition.EARLIEST
+    #start_pos = StartPosition.LATEST                                                                   
     stream = Stream(auth=auth, start_at=start_pos, )
 
     with stream.open("kafka://kafka.scimma.org/igwn.gwalert", "r") as s:
@@ -845,8 +848,16 @@ if __name__ == '__main__':
                     print("This is a retraction.")
                     slackbot.post_short_message(new_channel_name, "This alert was retracted." )
            
-            if important_event:
-                gw_handler.main( message, slackbot )  
+                if True: #important_event:
+                    gw_handler.main( message, slackbot )  
+                
+                from time import sleep
+                print("sleeping",end='', flush=True)
+                for i in range(3):
+                    sleep(0.5)
+                    print(".",end="", flush=True)
+                sleep(0.5)
+                print("")
         
 
                     

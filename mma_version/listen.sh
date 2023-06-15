@@ -4,6 +4,7 @@
 set -u
 
 # Create FRB_XMLs / GW_Avros
+#   For now these are actually det within reading_writing.py 
 frb_where_to_store="FRB_XMLs"
 frb_save_directory="$PWD"/"$( basename "$frb_where_to_store" )"
 gw_where_to_store="GW_Avros"
@@ -34,7 +35,7 @@ fi
 # running the rest of our program
 echo -e "GW listener running\n"
 
-python gw_listener.py #"$frb_save_directory"
+python bot_general_updated.py 
 
 #Need to comfirm this line print during real run
 echo -e "\nGW listener closing"
