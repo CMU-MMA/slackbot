@@ -95,9 +95,9 @@ def store_file( message ):
             
 
 #if __name__ == '__main__':
-def main( message ):
+def main( message, slackbot ):
 
-    slackbot = slack_bot()
+    #slackbot = slack_bot()
 
     '''
     auth = Auth("mdm2-6de7a486", "IVNjs29iwjc31npXjYDBlql2GmQTKFfy")                                    
