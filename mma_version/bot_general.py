@@ -5,7 +5,7 @@
 #   but for now I am simply adding a boolean variable `important_event ` to see if an event is 
 #   deemed important  (causing the original code to post to slack), and then simply calling my 
 #   code if it is interesting.
-#
+import gw_handler 
 #
 ############################################################
 # Credit for this bot goes to Ved Shah/Gautham Narayan
@@ -1006,6 +1006,7 @@ if __name__ == '__main__':
                     except SlackApiError as e:
                         print("\nCould post message. Error: ", e.response["error"])
             if important_event:
-                gw_handler( message )  
+                gw_handler.main( message )  
+        
 
                     
