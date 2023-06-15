@@ -21,9 +21,6 @@ from slacktalker import slack_bot
 from hop import stream, Stream
 from hop.io import StartPosition
 from hop.auth import Auth
-from slack import WebClient
-from slack_sdk.errors import SlackApiError
-from slack_token import SLACK_TOKEN
 from slack_token import hop_username
 from slack_token import hop_pw
 ####
@@ -45,22 +42,6 @@ from ligo.skymap.moc import uniq2pixarea
 # Run from environment gw-bot
 # conda activate gw-bot
 # python3 bot.py 
-############################################################
-# Uncomment this line to get old alerts. The formatting for these can be rough so be careful.
-# This is a way to test the slackbot works if no alerts are currently being sent! But in general, turn it off..... (i.e., comment the line out.)
-#stream = Stream(start_at=StartPosition.EARLIEST)
-
-#Another test using Auth
-auth = Auth(hop_username,  )
-stream = Stream(start_at=StartPosition.EARLIEST)
-#Could just change the start time instead of doing EARLIEST as a way to test specific event sorting...
-
-#Using Auth 
-#auth = Auth(hop_username, hop_pw)
-#stream = Stream(auth=auth)
-
-#Default/Original
-#stream = Stream()
 ############################################################
 # Look into running on spin @ nersc:
 # https://www.nersc.gov/systems/spin/
@@ -237,12 +218,30 @@ def parse_notice(record):
     return(kwargs)
     
 ############################################################
+# Michael: new functions that are commonly used
+def gracedb_bayestar_and_treasuremap( superevent_id ):
+    gracedb = f"https://example.org/superevents/{superevent_id}/view"
+    img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{superevent_id}/files/bayestar.png"
+    img_link2 = f"https://gracedb.ligo.org/api/superevents/{superevent_id}/files/bayestar.volume.png"
+    img_link3 = f"https://gracedb.ligo.org/api/superevents/{superevent_id}/files/bayestar.fits.gz"
+    img_link4 = f"http://treasuremap.space/alerts?graceids={superevent_id}"
+    return gracedb, img_link1, img_link2, img_link3, img_link4
+
+def images_for_update( superevent_id ):
+    img_link1a = f"https://gracedb.ligo.org/apiweb/superevents/{superevent_id}/files/Bilby.png"
+    img_link2a = f"https://gracedb.ligo.org/api/superevents/{superevent_id}/files/Bilby.volume.png"
+    img_link3a = f"https://gracedb.ligo.org/api/superevents/{superevent_id}/files/Bilby.multiorder.fits"
+    return img_link1a, img_link2a, img_link3a
+
+############################################################
 
 
 if __name__ == '__main__':
 
-    print("\n\nYour SLACK_TOKEN: "+SLACK_TOKEN+"\n\n")
-
+    auth = Auth( hop_username, hop_pw )
+    #start_pos = StartPosition.EARLIEST
+    start_pos = StartPosition.LATEST                                                                   
+    stream = Stream(auth=auth, start_at=start_pos, )
 
     with stream.open("kafka://kafka.scimma.org/igwn.gwalert", "r") as s:
 
@@ -332,12 +331,7 @@ if __name__ == '__main__':
                             #Needs GPS TIME - not really as can now just run based on a gracedb name after Robert's code change
                             print("\n\n TO DO: Auto-run gwemopt and auto-create DECam JSON File \n\n")
 
-                            gracedb = f"https://example.org/superevents/{instance['superevent_id']}/view"
-                            img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/bayestar.png"
-                            img_link2 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.volume.png"
-                            img_link3 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.fits.gz"
-                            img_link4 = f"http://treasuremap.space/alerts?graceids={instance['superevent_id']}"
-
+                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
                             ########
 
                             if notice is None and instance["alert_type"] != "UPDATE":
@@ -362,11 +356,8 @@ if __name__ == '__main__':
 
                                 print('This is an update alert, sending less information.')
 
-                                img_link1a = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/Bilby.png"
-                                img_link2a = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/Bilby.volume.png"
-                                img_link3a = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/Bilby.multiorder.fits"
+                                img_link1a, img_link2a, img_link3a = images_for_update( instance['superevent_id'] )
                                 
-
                                 # Creating the message text
                                 message_text = f"@Channel \
                                 \n\n *This is an update alert. Use bilby skymap because better. * \n\n \
@@ -395,7 +386,6 @@ if __name__ == '__main__':
                                 else: 
                                     ext = 'None... :('
                                     ext_details = 'None'
-
 
                                 #print(has_gap)
                                 #print('hi')
@@ -474,12 +464,7 @@ if __name__ == '__main__':
                             #Needs GPS TIME
                             print("\n\n TO DO: Auto run gwemopt and create DECam JSON File \n\n")
 
-                            gracedb = f"https://example.org/superevents/{instance['superevent_id']}/view"
-                            img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/bayestar.png"
-                            img_link2 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.volume.png"
-                            img_link3 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.fits.gz"
-                            img_link4 = f"http://treasuremap.space/alerts?graceids={instance['superevent_id']}"
-
+                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
                             ########
 
                             if notice is None and instance["alert_type"] != "UPDATE":
@@ -504,9 +489,7 @@ if __name__ == '__main__':
 
                                 print('This is an update alert, sending less information.')
 
-                                img_link1a = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/Bilby.png"
-                                img_link2a = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/Bilby.volume.png"
-                                img_link3a = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/Bilby.multiorder.fits"
+                                img_link1a, img_link2a, img_link3a = images_for_update( instance['superevent_id'] )
                                 
 
                                 # Creating the message text
@@ -624,12 +607,7 @@ if __name__ == '__main__':
                             #Needs GPS TIME
                             print("\n\n TO DO: Auto run gwemopt and create DECam JSON File \n\n")
 
-                            gracedb = f"https://example.org/superevents/{instance['superevent_id']}/view"
-                            img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/bayestar.png"
-                            img_link2 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.volume.png"
-                            img_link3 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.fits.gz"
-                            img_link4 = f"http://treasuremap.space/alerts?graceids={instance['superevent_id']}"
-
+                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
                             ########
 
                             if notice is None and instance["alert_type"] != "UPDATE":
@@ -650,9 +628,7 @@ if __name__ == '__main__':
 
                                 print('This is an update alert, sending less information.')
 
-                                img_link1a = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/Bilby.png"
-                                img_link2a = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/Bilby.volume.png"
-                                img_link3a = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/Bilby.multiorder.fits"
+                                img_link1a, img_link2a, img_link3a = images_for_update( instance['superevent_id'] )
                                 
 
                                 # Creating the message text
@@ -757,12 +733,7 @@ if __name__ == '__main__':
 
                             print("TO DO: Area filtering for these events - and creation of similar channel for low significance events that are well localized.")
 
-                            gracedb = f"https://example.org/superevents/{instance['superevent_id']}/view"
-                            img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/bayestar.png"
-                            img_link2 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.volume.png"
-                            img_link3 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.fits.gz"
-                            img_link4 = f"http://treasuremap.space/alerts?graceids={instance['superevent_id']}"
-
+                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
                             # Creating the message text
                             message_text = f" \n\n * THIS IS A BURST EVENT - NO DISTANCE AND NO CLASSIFICATION FOR THESE UNMODELED EVENTS* \n\n \
                             Superevent ID: *{instance['superevent_id']}*\n \
@@ -786,12 +757,7 @@ if __name__ == '__main__':
 
                             print("TO DO: Area filtering for these events - and creation of similar channel for low significance events that are well localized.")
 
-                            gracedb = f"https://example.org/superevents/{instance['superevent_id']}/view"
-                            img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/bayestar.png"
-                            img_link2 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.volume.png"
-                            img_link3 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.fits.gz"
-                            img_link4 = f"http://treasuremap.space/alerts?graceids={instance['superevent_id']}"
-
+                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
                             # Creating the message text
                             message_text = f" \n\n * THIS IS A BURST EVENT - NO DISTANCE AND NO CLASSIFICATION FOR THESE UNMODELED EVENTS* \n\n \
                             \n\n * THIS IS AN UPDATE ALERT * \n\n \
@@ -823,12 +789,7 @@ if __name__ == '__main__':
 
                             new_channel_name = '#low-sig-alerts'
 
-                            gracedb = f"https://example.org/superevents/{instance['superevent_id']}/view"
-                            img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/bayestar.png"
-                            img_link2 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.volume.png"
-                            img_link3 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.fits.gz"
-                            img_link4 = f"http://treasuremap.space/alerts?graceids={instance['superevent_id']}"
-
+                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
                             print("Notice passes all checks - sending more details:")
 
                             if notice['external'] != None:
@@ -878,16 +839,14 @@ if __name__ == '__main__':
                     except KeyError:
                         print('Bad data formatting...skipping message')      
 
-
                 # RETRACTION
                 else: 
                     important_event = True
                     print("This is a retraction.")
                     slackbot.post_short_message(new_channel_name, "This alert was retracted." )
-    
-                    
+           
             if important_event:
-                gw_handler.main( message )  
+                gw_handler.main( message, slackbot )  
         
 
                     
