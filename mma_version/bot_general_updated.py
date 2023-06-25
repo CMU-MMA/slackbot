@@ -1,10 +1,8 @@
 ############################################################
 # Michael's comments:
 #   I have tried to implement my code with as little change to your existing code as possible.
-#   Things can  be streamlined in the future (at least with the slack message posts), 
-#   but for now I am simply adding a boolean variable `important_event ` to see if an event is 
-#   deemed important  (causing the original code to post to slack), and then simply calling my
-#   code if it is interesting.
+#   Things can  be streamlined in the future (at least with the slack message posts). After talking
+#   with Palmese, my code will be called on all events that are not mock / not terrestrial
 # Updated comment:
 #   I have updated this file to use my slacktalker class, just simplifying the post_message calls
 #
@@ -252,7 +250,6 @@ if __name__ == '__main__':
         slackbot = slack_bot()
 
         for message in s:
-            important_event = False
 
             # Schema for data available at https://emfollow.docs.ligo.org/userguide/content.html#kafka-notice-gcn-scimma
             data = message.content
@@ -315,7 +312,6 @@ if __name__ == '__main__':
                         # Setting some preliminary thresholds so that the channel does not get flooded with bad alerts. Adapt based on needs.
                         # Starting with only significant NS and not mock event as the only threshold.
                         if (instance['event']['classification']['BNS'] > 0.15 or best_class == 'BNS') and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M': 
-                            important_event = True
                             print("NSNS")
                             #print(instance)
 
@@ -448,7 +444,6 @@ if __name__ == '__main__':
 
 
                         elif (instance['event']['classification']['NSBH'] > 0.15 or best_class == 'NSBH') and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
-                            important_event = True
                             print("NSBH")
                             #print(instance)
 
@@ -581,8 +576,6 @@ if __name__ == '__main__':
                                 # This is a message with buttons and stuff to the new channel
 
                         elif best_class == 'BBH' and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M': #instance['event']['classification']['BBH'] > 0.7 and
-                            important_event = True
-
                             #and best_class == 'BBH' 
                 
 
@@ -729,7 +722,6 @@ if __name__ == '__main__':
                     try:
 
                         if instance['event']['group'] != 'CBC' and instance['event']['significant'] == True:
-                            important_event = True
                             print("burst")
 
                             new_channel_name = '#burst-alert'
@@ -753,7 +745,6 @@ if __name__ == '__main__':
 
 
                         elif instance['event']['group'] != 'CBC' and instance['event']['significant'] == True and instance['alert_type'] == 'UPDATE':
-                            important_event = True
                             print("This is an update for a burst alert!")
 
                             new_channel_name = '#burst-alert'
@@ -786,8 +777,6 @@ if __name__ == '__main__':
                         print("Parsed the notice properly")
 
                         if float(notice['area90']) < 250 and instance['event']['significant'] != True and instance['event']['classification']['Terrestrial'] < 0.4:
-                            # Michael: I take 'low significance' to mean I shouldn't care?
-                            #important_event = True
                             print("Low Significance Alert")
 
                             new_channel_name = '#low-sig-alerts'
@@ -844,20 +833,20 @@ if __name__ == '__main__':
 
                 # RETRACTION
                 else: 
-                    important_event = True
                     print("This is a retraction.")
                     slackbot.post_short_message(new_channel_name, "This alert was retracted." )
            
-                if True: #important_event:
-                    gw_handler.main( message, slackbot )  
-                
-                from time import sleep
-                print("sleeping",end='', flush=True)
-                for i in range(3):
-                    sleep(0.5)
-                    print(".",end="", flush=True)
+           # If the event is not a mock and is not terrestrial, we call the gw/frb code
+            if message.content[0]['superevent_id'][0] != 'M' and message.content[0]['event']['classification']['Terrestrial'] < 0.5:
+                gw_handler.main( message, slackbot )  
+            
+            from time import sleep
+            print("sleeping",end='', flush=True)
+            for i in range(3):
                 sleep(0.5)
-                print("")
+                print(".",end="", flush=True)
+            sleep(0.5)
+            print("")
         
 
                     
