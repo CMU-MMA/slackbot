@@ -24,6 +24,7 @@ from reading_writing import (
     read_xml_file,
     alerted_slack,
     remove_avro,
+    save_skymap,
     _clear_avros
     )
 from comparing_events import determine_relation
@@ -48,8 +49,6 @@ def compare_to_frbs( message, slackbot ):
             # We alerted slack!
             alerted_slack( message.content[0]['superevent_id']+".avro", file )
 
-
-
 def deal_with_retraction( content, slackbot ):
     files = get_file_names( GW=True )
     for file in files:
@@ -69,6 +68,9 @@ def deal_with_retraction( content, slackbot ):
     logger.info("Did not delete anything")
 
 def store_file( message ):
+    # Always storing skymap, should overwrite if it is an update
+    save_skymap( message.content[0] )
+    
     if message.content[0]["alert_type"] =="EARLYWARNING":
         write_avro_file( message, logger )
     else:
@@ -84,7 +86,7 @@ def store_file( message ):
         # Reach here if there is no previous version of this event
         logger.info(f"NEW WRITE of event {message.content[0]['superevent_id']}")
         write_avro_file( message, logger )
-            
+
 
 def main( message, slackbot ):
 
@@ -108,21 +110,20 @@ def main( message, slackbot ):
 
     # Schema for data available at https://emfollow.docs.ligo.org/userguide/content.html#kafka-notice-gcn-scimma
     # or simply message.schema
-    if message.content[0]['superevent_id'][0] == 'M':
-        logger.info("This is a MOCK event, still handling for now")
+    if message.content[0]['superevent_id'][0] != 'M':
+        # If this is a retraction, we need to see if we still have the now invalid initial notice
+        if message.content[0]["alert_type"] == "RETRACTION":
+            logger.info("This is a retraction")
+            #Looking for old notice, deleting if found
+            deal_with_retraction( message.content[0], slackbot )
+        else:
+            logger.info("This is not a retraction")
+            # Look at current files to see if anything could be updated
+            store_file( message )
+            # Write to file and compare with stored FRBs
+            compare_to_frbs( message, slackbot )
     else:
-        logger.info("This is a REAL event")
-    # If this is a retraction, we need to see if we still have the now invalid initial notice
-    if message.content[0]["alert_type"] == "RETRACTION":
-        logger.info("This is a retraction")
-        #Looking for old notice, deleting if found
-        deal_with_retraction( message.content[0], slackbot )
-    else:
-        logger.info("This is not a retraction")
-        # Look at current files to see if anything could be updated
-        store_file( message )
-        # Write to file and compare with stored FRBs
-        compare_to_frbs( message, slackbot )
+        logger.warning("This is a MOCK event, something is wrong...")
 
 
     sleep(0.5)

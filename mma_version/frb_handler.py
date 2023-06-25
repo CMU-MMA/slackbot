@@ -52,7 +52,7 @@ def compare_to_gws( event, slackbot ):
             match = determine_relation( read_avro_file(file), event, slackbot, logger )
             if match:
                 # need to note that we sent this event!
-                alerted_slack( file, get_xml_filename(event.attrib["ivorn"])+".xml", logger)
+                alerted_slack( file, get_xml_filename(event.attrib["ivorn"], logger)+".xml", logger)
 
 
 

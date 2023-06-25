@@ -7,12 +7,35 @@ import string
 from fastavro import writer, reader, parse_schema
 import voeventparse as vp
 
-from twisted.python import lockfile
-# Using lockfile to ensure our reading/writing is uninterrupted
-
+import fasteners #https://pypi.org/project/fasteners/
+from contextlib import contextmanager
 
 FRB_DIRECTORY = os.path.join(os.getcwd(),"FRB_XMLs")
+FRB_SAVED = os.path.join(FRB_DIRECTORY,"FRB_XMLs")
 GW_DIRECTORY = os.path.join(os.getcwd(),"GW_Avros")
+GW_SAVED = os.path.join(GW_DIRECTORY,"GW_Avros")
+SKYMAPS_DIRECTORY = os.path.join(os.getcwd(),"all_skymaps")
+
+# LOCKING CONTEXT MANAGER #################################
+
+@contextmanager
+def read_lock( file_name ):
+    lock_file = f'{file_name}.lock'
+    lock = fasteners.InterProcessReaderWriterLock(lock_file)
+    try:
+        with lock.read_lock():
+            yield
+    finally:
+        os.remove(lock_file)
+@contextmanager
+def write_lock( file_name ):
+    lock_file = f'{file_name}.lock'
+    lock = fasteners.InterProcessReaderWriterLock(lock_file)
+    try:
+        with lock.write_lock():
+            yield
+    finally:
+        os.remove(lock_file)
 
 # GENERAL FUNCTIONS #######################################
 
@@ -20,12 +43,9 @@ def get_file_names( GW=True ):
     directory = 'GW_Avros' if GW else "FRB_XMLs"
     #files = [os.path.join(directory, f) for f in os.listdir(directory) if
     #         os.path.isfile(os.path.join(directory, f))]
-    try:
-        files = [ f for f in os.listdir(directory) if
-                os.path.isfile(os.path.join(directory, f))]
-        return files
-    except FileNotFoundError:
-        return []
+    files = [ f for f in os.listdir(directory) if
+             os.path.isfile(os.path.join(directory, f))]
+    return files
 
 def _clear_avros():
     files = get_file_names(GW=True)
@@ -62,22 +82,23 @@ def alerted_slack( gw_filename, frb_filename ):
 
 def read_avro_file( file_name ):
     file_name = os.path.join( GW_DIRECTORY, file_name)
-    
-    lock = lockfile.FilesystemLock(file_name + ".lock")
-    lock.lock()
-    try:
+    with read_lock(file_name):
         with open(file_name, "rb") as fo:
             avro_reader = reader(fo)
             record = next(avro_reader)
-    finally:
-        lock.unlock()
     return record
 
 def write_avro_file( message, logger, alerted_slack=False ):
     # Using the same schema with an added "alerted_slack" attribute (default False)
     schema = message.schema
-    schema['fields'].append({'doc': 'Record of if we sent this to Slack.',
+    #print(schema)
+    #print(type(schema))
+    if True: #scheme #not exitsts 
+        schema['fields'].append({'doc': 'Record of if we sent this to Slack.',
                              'name': 'alerted_slack', 'type': 'boolean'})
+    #message.get('event', {}).pop('skymap')
+    #from pprint import pprint
+    #pprint(message)
     message.content[0]['alerted_slack'] = alerted_slack
     parsed_schema = parse_schema(schema)
 
@@ -85,15 +106,12 @@ def write_avro_file( message, logger, alerted_slack=False ):
         os.makedirs( GW_DIRECTORY )
     file_name = os.path.join( GW_DIRECTORY, message.content[0]['superevent_id']+".avro")
     
-    lock = lockfile.FilesystemLock(file_name + ".lock")
-    lock.lock()
-    try:
+    with write_lock(file_name):
         logger.debug(f"Writing incoming GW notice to {file_name}...")
         with open(file_name, 'wb') as out:
             writer(out, parsed_schema, message.content)
         logger.debug("Done")
-    finally:
-        lock.unlock()
+
     return file_name
 
 
@@ -102,14 +120,10 @@ def write_avro_file( message, logger, alerted_slack=False ):
 def read_xml_file( file_name ):
     file_name = os.path.join( FRB_DIRECTORY, file_name)
 
-    lock = lockfile.FilesystemLock(file_name + ".lock")
-    lock.lock()
-    try:
+    with read_lock(file_name):
         with open(file_name, "rb") as f:
             # Load VOEvent XML from file
             voevent = vp.load(f)
-    finally:
-        lock.unlock()
     return voevent
 
 def get_xml_filename( input_string, logger ):
@@ -135,15 +149,43 @@ def write_xml_file( event, logger, alerted_slack=False)->str:
                            f"alerted_slack ={alerted_slack}" 
     if not os.path.exists( FRB_DIRECTORY ):
         os.makedirs( FRB_DIRECTORY )
-    file_name = os.path.join( FRB_DIRECTORY, get_xml_filename(event.attrib["ivorn"], logger)+".xml" )
+    file_name = os.path.join( FRB_DIRECTORY, get_xml_filename(event.attrib["ivorn"])+".xml")
 
-    lock = lockfile.FilesystemLock(file_name + ".lock")
-    lock.lock()
-    try:
+    with write_lock(file_name):
         logger.debug(f"Writing incoming GW notice to {file_name}...")
         with open( file_name , 'wb') as f:
             vp.dump(event, f)
         logger.debug("Done")
-    finally:
-        lock.unlock()
     return file_name
+
+
+###############################################################################
+
+def save_skymap( notice ):
+    if 'skymap' in notice['event'].keys():
+        skymap_bytes = notice.get('event', {}).get('skymap')
+        
+        if not os.path.exists( SKYMAPS_DIRECTORY ):
+            os.makedirs( SKYMAPS_DIRECTORY )
+        file_name = os.path.join( SKYMAPS_DIRECTORY, notice['superevent_id']+".bin")
+    
+        with write_lock( file_name ):
+            with open(file_name, 'wb') as f: 
+                f.write( skymap_bytes )
+
+# Give function to Palmese##################
+from io import BytesIO 
+from astropy.table import Table 
+
+# The files are named as message['superevent_id']+".bin"
+#   All skymaps are saved for events with terrastrial < 0.5
+# If more data about the event is useful, I can also just save
+#   the entire notice (which would include the skymap)
+def read_skymap( file_name ):
+    file_name = os.path.join( SKYMAPS_DIRECTORY, file_name)
+    
+    with open(file_name, "rb") as f:
+        skymap_bytes = f.read()
+    skymap = Table.read(BytesIO(skymap_bytes))
+    return skymap
+##############################################
