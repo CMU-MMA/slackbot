@@ -1,11 +1,12 @@
 ############################################################
 # Michael's comments:
 #   I have tried to implement my code with as little change to your existing code as possible.
-#   Things can  be streamlined in the future (at least with the slack message posts), 
-#   but for now I am simply adding a boolean variable `important_event ` to see if an event is 
-#   deemed important  (causing the original code to post to slack), and then simply calling my 
-#   code if it is interesting.
+#   Things can  be streamlined in the future (at least with the slack message posts). After talking
+#   with Palmese, my code will be called on all events that are not mock / not terrestrial
+#   I have updated this file to use my slacktalker class, just simplifying the post_message calls
+#
 import gw_handler 
+from slacktalker import slack_bot
 #
 ############################################################
 # Credit for this bot goes to Ved Shah/Gautham Narayan
@@ -17,9 +18,6 @@ import gw_handler
 from hop import stream, Stream
 from hop.io import StartPosition
 from hop.auth import Auth
-from slack import WebClient
-from slack_sdk.errors import SlackApiError
-from slack_token import SLACK_TOKEN
 from slack_token import hop_username
 from slack_token import hop_pw
 ####
@@ -41,22 +39,6 @@ from ligo.skymap.moc import uniq2pixarea
 # Run from environment gw-bot
 # conda activate gw-bot
 # python3 bot.py 
-############################################################
-# Uncomment this line to get old alerts. The formatting for these can be rough so be careful.
-# This is a way to test the slackbot works if no alerts are currently being sent! But in general, turn it off..... (i.e., comment the line out.)
-#stream = Stream(start_at=StartPosition.EARLIEST)
-
-#Another test using Auth
-auth = Auth(hop_username, hop_pw)
-stream = Stream(start_at=StartPosition.EARLIEST)
-#Could just change the start time instead of doing EARLIEST as a way to test specific event sorting...
-
-#Using Auth 
-#auth = Auth(hop_username, hop_pw)
-#stream = Stream(auth=auth)
-
-#Default/Original
-#stream = Stream()
 ############################################################
 # Look into running on spin @ nersc:
 # https://www.nersc.gov/systems/spin/
@@ -233,19 +215,37 @@ def parse_notice(record):
     return(kwargs)
     
 ############################################################
+# Michael: new functions that are commonly used
+def gracedb_bayestar_and_treasuremap( superevent_id ):
+    gracedb = f"https://example.org/superevents/{superevent_id}/view"
+    img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{superevent_id}/files/bayestar.png"
+    img_link2 = f"https://gracedb.ligo.org/api/superevents/{superevent_id}/files/bayestar.volume.png"
+    img_link3 = f"https://gracedb.ligo.org/api/superevents/{superevent_id}/files/bayestar.fits.gz"
+    img_link4 = f"http://treasuremap.space/alerts?graceids={superevent_id}"
+    return gracedb, img_link1, img_link2, img_link3, img_link4
+
+def images_for_update( superevent_id ):
+    img_link1a = f"https://gracedb.ligo.org/apiweb/superevents/{superevent_id}/files/Bilby.png"
+    img_link2a = f"https://gracedb.ligo.org/api/superevents/{superevent_id}/files/Bilby.volume.png"
+    img_link3a = f"https://gracedb.ligo.org/api/superevents/{superevent_id}/files/Bilby.multiorder.fits"
+    return img_link1a, img_link2a, img_link3a
+
+############################################################
 
 
 if __name__ == '__main__':
 
-    print("\n\nYour SLACK_TOKEN: "+SLACK_TOKEN+"\n\n")
+    auth = Auth( hop_username, hop_pw )
+    #start_pos = StartPosition.EARLIEST
+    start_pos = StartPosition.LATEST                                                                   
+    stream = Stream(auth=auth, start_at=start_pos, )
 
     with stream.open("kafka://kafka.scimma.org/igwn.gwalert", "r") as s:
 
         print("\n\nHop Skotch stream open. Creating Slack client...\n\n")
-        client = WebClient(token=SLACK_TOKEN)
+        slackbot = slack_bot()
 
         for message in s:
-            important_event = False
 
             # Schema for data available at https://emfollow.docs.ligo.org/userguide/content.html#kafka-notice-gcn-scimma
             data = message.content
@@ -308,7 +308,6 @@ if __name__ == '__main__':
                         # Setting some preliminary thresholds so that the channel does not get flooded with bad alerts. Adapt based on needs.
                         # Starting with only significant NS and not mock event as the only threshold.
                         if (instance['event']['classification']['BNS'] > 0.15 or best_class == 'BNS') and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M': 
-                            important_event = True
                             print("NSNS")
                             #print(instance)
 
@@ -327,12 +326,7 @@ if __name__ == '__main__':
                             #Needs GPS TIME - not really as can now just run based on a gracedb name after Robert's code change
                             print("\n\n TO DO: Auto-run gwemopt and auto-create DECam JSON File \n\n")
 
-                            gracedb = f"https://example.org/superevents/{instance['superevent_id']}/view"
-                            img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/bayestar.png"
-                            img_link2 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.volume.png"
-                            img_link3 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.fits.gz"
-                            img_link4 = f"http://treasuremap.space/alerts?graceids={instance['superevent_id']}"
-
+                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
                             ########
 
                             if notice is None and instance["alert_type"] != "UPDATE":
@@ -357,11 +351,8 @@ if __name__ == '__main__':
 
                                 print('This is an update alert, sending less information.')
 
-                                img_link1a = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/Bilby.png"
-                                img_link2a = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/Bilby.volume.png"
-                                img_link3a = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/Bilby.multiorder.fits"
+                                img_link1a, img_link2a, img_link3a = images_for_update( instance['superevent_id'] )
                                 
-
                                 # Creating the message text
                                 message_text = f"@Channel \
                                 \n\n *This is an update alert. Use bilby skymap because better. * \n\n \
@@ -390,7 +381,6 @@ if __name__ == '__main__':
                                 else: 
                                     ext = 'None... :('
                                     ext_details = 'None'
-
 
                                 #print(has_gap)
                                 #print('hi')
@@ -437,71 +427,19 @@ if __name__ == '__main__':
 
                                 print(message_text)
 
+                            if( message_text is not None ):
+                                # This creates a new slack channel for the alert
+                                slackbot.create_new_channel( new_channel_name )
 
-                            # This creates a new slack channel for the alert
-                
-                            try:
-                                if message_text is not None:
-                                    print("Trying to create a new channel...", end='')
-                                    response = client.conversations_create(name=new_channel_name, token = SLACK_TOKEN)
-                                    name_taken = False
-                                    print(response)
-                                    print("Done")
-                            except SlackApiError as e:
-                                if e.response["error"] == "name_taken":
-                                    print("Done")
-                                    name_taken = True
-                                else:
-                                    print("\nCould not create new channel. Error: ", e.response["error"])
+                                # This is a message without buttons and stuff. We are assuming #alert-bot-test already exists and the bot is added to it
+                                # If it fails, create #alert-bot-test or similar channel and BE SURE to add the slack bot app to that channel or it cannot send a message to it!
+                                slackbot.post_short_message("#bns-alert", message_text )
+    
+                                # This is a message with buttons and stuff to the new channel
+                                slackbot.post_message( instance['superevent_id'], message_text, new_channel_name )
 
-                            # This is a message without buttons and stuff. We are assuming #alert-bot-test already exists and the bot is added to it
-                            # If it fails, create #alert-bot-test or similar channel and BE SURE to add the slack bot app to that channel or it cannot send a message to it!
-                            try:
-                                print("Trying to send message to ns channel...", end='')
-                                if name_taken == False:
-                                    if message_text is not None:
-                                        response = client.chat_postMessage(channel='#bns-alert', text=message_text)
-                                print("Done")
-                            except SlackApiError as e:
-                                print("\nCould not post message. Error: ", e.response["error"])
-                            
-                            # This is a message with buttons and stuff to the new channel
-                            try:
-                                print("Trying to send message to event channel...",end='')
-                                response = client.chat_postMessage(
-                                                        channel=f"#{new_channel_name}",
-                                                        token = SLACK_TOKEN,
-                                                        blocks = [  {"type": "section", 
-                                                                    "text": {
-                                                                                "type": "mrkdwn", 
-                                                                                "text": message_text
-                                                                                }
-                                                                    },
-                                                                    {
-                                                                        "type": "actions",
-                                                                        "block_id": "actions1",
-                                                                        "elements": 
-                                                                        [
-                                                                            {
-                                                                                "type": "button",
-                                                                                "text": {
-                                                                                    "type": "plain_text",
-                                                                                    "text": f"Some {instance['superevent_id']} related action"
-                                                                                },
-                                                                                "value": "cancel",
-                                                                                "action_id": "button_1"
-                                                                            }
-                                                                        ]
-                                                                    }
-                                                                    
-                                                                ]
-                                                        )
-                                print("Done")
-                            except SlackApiError as e:
-                                print("\nCould not post message. Error: ", e.response["error"])
 
                         elif (instance['event']['classification']['NSBH'] > 0.15 or best_class == 'NSBH') and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
-                            important_event = True
                             print("NSBH")
                             #print(instance)
 
@@ -520,12 +458,7 @@ if __name__ == '__main__':
                             #Needs GPS TIME
                             print("\n\n TO DO: Auto run gwemopt and create DECam JSON File \n\n")
 
-                            gracedb = f"https://example.org/superevents/{instance['superevent_id']}/view"
-                            img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/bayestar.png"
-                            img_link2 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.volume.png"
-                            img_link3 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.fits.gz"
-                            img_link4 = f"http://treasuremap.space/alerts?graceids={instance['superevent_id']}"
-
+                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
                             ########
 
                             if notice is None and instance["alert_type"] != "UPDATE":
@@ -550,9 +483,7 @@ if __name__ == '__main__':
 
                                 print('This is an update alert, sending less information.')
 
-                                img_link1a = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/Bilby.png"
-                                img_link2a = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/Bilby.volume.png"
-                                img_link3a = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/Bilby.multiorder.fits"
+                                img_link1a, img_link2a, img_link3a = images_for_update( instance['superevent_id'] )
                                 
 
                                 # Creating the message text
@@ -630,67 +561,17 @@ if __name__ == '__main__':
                                 print(message_text)
 
 
-                            # This creates a new slack channel for the alert
-                            if message_text is not None:
-                                try:
-                                    print("Trying to create a new channel...", end='')
-                                    response = client.conversations_create(name=new_channel_name, token = SLACK_TOKEN)
-                                    name_taken = False
-                                    print(response)
-                                    print("Done")
-                                except SlackApiError as e:
-                                    if e.response["error"] == "name_taken":
-                                        name_taken = True
-                                        print("Done")
-                                    else:
-                                        print("\nCould not create new channel. Error: ", e.response["error"])
-                                try:
-                                    print("Trying to send message to nsbh channel...", end='')
-                                    if name_taken == False:
-                                        response = client.chat_postMessage(channel='#nsbh-alert', text=message_text)
-                                    print("Done")
-                                except SlackApiError as e:
-                                    print("\nCould not post message. Error: ", e.response["error"])
+                            if( message_text is not None ):
+                                # This creates a new slack channel for the alert
+                                slackbot.create_new_channel( new_channel_name )
+                                # This is a message without buttons and stuff.
+                                slackbot.post_short_message("#nsbh-alert", message_text )
+                                # This is a message with buttons and stuff to the new channel
+                                slackbot.post_message( instance['superevent_id'], message_text, new_channel_name )
                             
                                 # This is a message with buttons and stuff to the new channel
-                                try:
-                                    print("Trying to send message to event channel...",end='')
-                                    response = client.chat_postMessage(
-                                                            channel=f"#{new_channel_name}",
-                                                            token = SLACK_TOKEN,
-                                                            blocks = [  {"type": "section", 
-                                                                        "text": {
-                                                                                    "type": "mrkdwn", 
-                                                                                    "text": message_text
-                                                                                    }
-                                                                        },
-                                                                        {
-                                                                            "type": "actions",
-                                                                            "block_id": "actions1",
-                                                                            "elements": 
-                                                                            [
-                                                                                {
-                                                                                    "type": "button",
-                                                                                    "text": {
-                                                                                        "type": "plain_text",
-                                                                                        "text": f"Some {instance['superevent_id']} related action"
-                                                                                    },
-                                                                                    "value": "cancel",
-                                                                                    "action_id": "button_1"
-                                                                                }
-                                                                            ]
-                                                                        }
-                                                                        
-                                                                    ]
-                                                            )
-                                    print("Done")
-                                except SlackApiError as e:
-                                    print("\nCould not post message. Error: ", e.response["error"])
-
 
                         elif best_class == 'BBH' and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M': #instance['event']['classification']['BBH'] > 0.7 and
-                            important_event = True
-
                             #and best_class == 'BBH' 
                 
 
@@ -718,12 +599,7 @@ if __name__ == '__main__':
                             #Needs GPS TIME
                             print("\n\n TO DO: Auto run gwemopt and create DECam JSON File \n\n")
 
-                            gracedb = f"https://example.org/superevents/{instance['superevent_id']}/view"
-                            img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/bayestar.png"
-                            img_link2 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.volume.png"
-                            img_link3 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.fits.gz"
-                            img_link4 = f"http://treasuremap.space/alerts?graceids={instance['superevent_id']}"
-
+                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
                             ########
 
                             if notice is None and instance["alert_type"] != "UPDATE":
@@ -744,9 +620,7 @@ if __name__ == '__main__':
 
                                 print('This is an update alert, sending less information.')
 
-                                img_link1a = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/Bilby.png"
-                                img_link2a = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/Bilby.volume.png"
-                                img_link3a = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/Bilby.multiorder.fits"
+                                img_link1a, img_link2a, img_link3a = images_for_update( instance['superevent_id'] )
                                 
 
                                 # Creating the message text
@@ -825,12 +699,7 @@ if __name__ == '__main__':
                             # If it fails, create #alert-bot-test or similar channel and BE SURE to add the slack bot app to that channel or it cannot send a message to it!
                             # For BBH we are ONLY sending alerts to this channel and NOT creating an individual channel per BBH as that could get unruly...
                             if message_text is not None:
-                                try:
-                                    print("Trying to send message to bbh channel...", end='')
-                                    response = client.chat_postMessage(channel='#bbh-alert', text=message_text)
-                                    print("Done")
-                                except SlackApiError as e:
-                                    print("\nCould not post message. Error: ", e.response["error"])
+                                slackbot.post_short_message("#bbh-alert", message_text )
                                 
                         else: 
 
@@ -849,19 +718,13 @@ if __name__ == '__main__':
                     try:
 
                         if instance['event']['group'] != 'CBC' and instance['event']['significant'] == True:
-                            important_event = True
                             print("burst")
 
                             new_channel_name = '#burst-alert'
 
                             print("TO DO: Area filtering for these events - and creation of similar channel for low significance events that are well localized.")
 
-                            gracedb = f"https://example.org/superevents/{instance['superevent_id']}/view"
-                            img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/bayestar.png"
-                            img_link2 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.volume.png"
-                            img_link3 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.fits.gz"
-                            img_link4 = f"http://treasuremap.space/alerts?graceids={instance['superevent_id']}"
-
+                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
                             # Creating the message text
                             message_text = f" \n\n * THIS IS A BURST EVENT - NO DISTANCE AND NO CLASSIFICATION FOR THESE UNMODELED EVENTS* \n\n \
                             Superevent ID: *{instance['superevent_id']}*\n \
@@ -874,28 +737,17 @@ if __name__ == '__main__':
                             Treasure Map Link: {img_link4} \n \
                             "
 
-                            try:
-                                print("Trying to send message to bbh channel...", end='')
-                                response = client.chat_postMessage(channel='#burst-alert', text=message_text)
-                                print("Done")
-                            except SlackApiError as e:
-                                print("\nCould not post message. Error: ", e.response["error"])
+                            slackbot.post_short_message("#burst-alert", message_text )
 
 
                         elif instance['event']['group'] != 'CBC' and instance['event']['significant'] == True and instance['alert_type'] == 'UPDATE':
-                            important_event = True
                             print("This is an update for a burst alert!")
 
                             new_channel_name = '#burst-alert'
 
                             print("TO DO: Area filtering for these events - and creation of similar channel for low significance events that are well localized.")
 
-                            gracedb = f"https://example.org/superevents/{instance['superevent_id']}/view"
-                            img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/bayestar.png"
-                            img_link2 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.volume.png"
-                            img_link3 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.fits.gz"
-                            img_link4 = f"http://treasuremap.space/alerts?graceids={instance['superevent_id']}"
-
+                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
                             # Creating the message text
                             message_text = f" \n\n * THIS IS A BURST EVENT - NO DISTANCE AND NO CLASSIFICATION FOR THESE UNMODELED EVENTS* \n\n \
                             \n\n * THIS IS AN UPDATE ALERT * \n\n \
@@ -908,35 +760,24 @@ if __name__ == '__main__':
                             Treasure Map Link: {img_link4} \n \
                             "
 
-                            try:
-                                print("Trying to send message to bbh channel...", end='')
-                                response = client.chat_postMessage(channel='#burst-alert', text=message_text)
-                                print("Done")
-                            except SlackApiError as e:
-                                print("\nCould not post message. Error: ", e.response["error"])
+                            slackbot.post_short_message("#burst-alert", message_text )
+
 
                     except KeyError:
                         print('Bad data formatting...skipping message')   
 
                     try: 
 
-                        printprint("Parsing the notice")
+                        print("Parsing the notice")
                         notice = parse_notice(message.content[0])
                         print("Parsed the notice properly")
 
                         if float(notice['area90']) < 250 and instance['event']['significant'] != True and instance['event']['classification']['Terrestrial'] < 0.4:
-                            # Michael: I take 'low significance' to mean I shouldn't care?
-                            #important_event = True
                             print("Low Significance Alert")
 
                             new_channel_name = '#low-sig-alerts'
 
-                            gracedb = f"https://example.org/superevents/{instance['superevent_id']}/view"
-                            img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{instance['superevent_id']}/files/bayestar.png"
-                            img_link2 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.volume.png"
-                            img_link3 = f"https://gracedb.ligo.org/api/superevents/{instance['superevent_id']}/files/bayestar.fits.gz"
-                            img_link4 = f"http://treasuremap.space/alerts?graceids={instance['superevent_id']}"
-
+                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
                             print("Notice passes all checks - sending more details:")
 
                             if notice['external'] != None:
@@ -981,32 +822,21 @@ if __name__ == '__main__':
 
                             print(message_text)
 
-                        try:
-                            print("Trying to send message to bbh channel...", end='')
-                            response = client.chat_postMessage(channel='#bbh-alert', text=message_text)
-                            print("Done")
-                        except SlackApiError as e:
-                            print("\nCould not post message. Error: ", e.response["error"])
-                                
-                
+                        slackbot.post_short_message("#bbh-alert", message_text )
+    
                     except KeyError:
                         print('Bad data formatting...skipping message')      
 
-
                 # RETRACTION
                 else: 
-                    important_event = True
                     print("This is a retraction.")
+                    slackbot.post_short_message(new_channel_name, "This alert was retracted." )
+           
+           # If the event is not a mock and is not terrestrial, we call the gw/frb code
+            if message.content[0]['superevent_id'][0] != 'M' and message.content[0]['event']['classification']['Terrestrial'] < 0.5:
+                gw_handler.main( message, slackbot )  
+            
 
-                    try:
-                        print(f"Trying to send message to {new_channel_name} channel...", end='')
-                        response = client.chat_postMessage(channel=f'#{new_channel_name}', text="This alert was retracted.")
-                        print("Done")
-
-                    except SlackApiError as e:
-                        print("\nCould post message. Error: ", e.response["error"])
-            if important_event:
-                gw_handler.main( message )  
         
 
                     
