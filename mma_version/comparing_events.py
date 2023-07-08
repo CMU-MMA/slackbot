@@ -10,7 +10,8 @@ import numpy as np
 from io import BytesIO
 from astropy.table import Table
 
-from reading_writing import get_xml_filename
+from reading_writing import get_xml_filename, get_skymap_name
+from plotter import plot_skymap
 from odds_script import calculate_odds
 
 # CONSTANTS
@@ -59,7 +60,7 @@ def parse_gw( notice, skymap_bytes ):
         FAR: 1 per {far} years \n\
         log BCI: {skymap.meta['LOGBCI']:7.2f} \n\
         90% Area: *{gw_area_within( skymap_bytes, 0.9):.2f}* deg^2\n\
-        50% Area: *{gw_area_within( skymap_bytes, 0.9):.2f}* deg^2\n\
+        50% Area: *{gw_area_within( skymap_bytes, 0.5):.2f}* deg^2\n\
         Significant detection? *{notice['event']['significant']}* \n\
         Classification Probabilities: {notice['event']['classification']}\n\
         BNS % : {notice['event']['classification']['BNS']}\n\
@@ -133,7 +134,9 @@ def parse_frb( voevent ):
 
 def parse_message(gw_data, skymap_bytes, frb_data, odds):
     return f"*Possible Associated Event*\n\
-    Odds of Common Source: {odds:.2E}\n\n\n\
+    Odds of Common Source:\
+        minimum FRB z: {odds[0]:.2E}\n\
+        maximum FRB z: {odds[1]:.2E}\n\n\n\
     {parse_gw(gw_data, skymap_bytes)}\n\n\
     {parse_frb(frb_data)}"
 
@@ -233,7 +236,12 @@ def determine_relation( gw_data, frb_data, slackbot, logger ):
                 dm = vp.get_grouped_params(frb_data)['event parameters']['dm']['value']
                 odds = calculate_odds(skymap_bytes, frb_ra, frb_dec, frb_error, frb_pixel, float(dm), np.abs((TIME_BEFORE_GW + TIME_AFTER_GW)/ datetime.timedelta(days=1)))
                 message = parse_message(gw_data, skymap_bytes, frb_data, odds)
+                image_filename = plot_skymap( get_skymap_name( gw_data, logger ) ,frb_ra, frb_dec)
+                
                 slackbot.post_message( "GW-FRB Coincidence Found", message)
+                slackbot.post_skymap(image_filename, frb_data.attrib['ivorn'])
+
+                os.remove(image_filename)
                 return True
         else:
             logger.info("Does not have skymap")
@@ -249,7 +257,7 @@ def determine_relation( gw_data, frb_data, slackbot, logger ):
         else:
             pass
             # FRB came first (is too old)
-            filename = os.path.join("FRB_XMLs", get_xml_filename(frb_data.attrib["ivorn"])+".xml")
+            filename = os.path.join("FRB_XMLs", get_xml_filename(frb_data.attrib["ivorn"],logger)+".xml")
             os.remove(filename) 
         logger.info(f"Removed {filename}")
     return False
