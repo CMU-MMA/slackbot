@@ -15,7 +15,6 @@ Can be tested at the command line by running (for example):
 
 import sys
 import six
-import logging
 
 import voeventparse
 
@@ -33,13 +32,8 @@ from reading_writing import (
 from comparing_events import determine_relation
 
 
-logging.basicConfig(filename='GW_FRB_listener.log',
-                    level=logging.INFO,
-                    format = "%(asctime)s - %(name)s - %(message)s",
-                    datefmt="%Y-%m-%dT%H:%M:%S%z")
-logger = logging.getLogger("FRB")
-logger.handlers.append(logging.StreamHandler(sys.stdout))
-
+import log_setup
+logger = log_setup.logger("FRB")
 
 
 ###############################################################################
@@ -111,7 +105,7 @@ def handle_voevent(event):
         #Looking for old notice, deleting if found
         deal_with_retraction( event, slackbot )
     else:
-        logger.info("This is not a retraction")
+        logger.info("This is a new (or updated) event")
         if event.attrib["role"] == "utility":
             logger.info("this is an update")
             # Look at current files to see if anything could be updated
@@ -121,9 +115,6 @@ def handle_voevent(event):
         # Write to file and compare with stored FRBs
         compare_to_gws( event, slackbot )
 
-
-    #logger.info("At {0}, received VOEvent with IVORN {1}".format(now, ivorn))
-    #logger.info("Authored by {0} at {1}".format(author_ivorn, author_timestamp))
 
 if __name__ == '__main__':
     sys.exit(main())

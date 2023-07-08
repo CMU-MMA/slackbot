@@ -7,6 +7,7 @@ from hop.io import StartPosition
 from pprint import pprint
 from hop.auth import Auth 
 
+
 '''
 from io import BytesIO
 from astropy.coordinates import SkyCoord
@@ -29,13 +30,8 @@ from reading_writing import (
     )
 from comparing_events import determine_relation
 
-logging.basicConfig(filename='GW_FRB_listener.log',
-                    level=logging.INFO,
-                    format = "%(asctime)s - %(name)s - %(message)s",
-                    datefmt="%Y-%m-%dT%H:%M:%S%z"
-                    )
-logger = logging.getLogger("GW_")
-logger.handlers.append(logging.StreamHandler(sys.stdout))
+import log_setup
+logger = log_setup.logger("GW_")
     
 ############################################################
 
@@ -47,7 +43,9 @@ def compare_to_frbs( message, slackbot ):
         match = determine_relation( message.content[0], read_xml_file(file), slackbot, logger )
         if match:
             # We alerted slack!
-            alerted_slack( message.content[0]['superevent_id']+".avro", file )
+            alerted_slack( message.content[0]['superevent_id']+".avro", file, logger )
+
+
 
 def deal_with_retraction( content, slackbot ):
     files = get_file_names( GW=True )
@@ -86,12 +84,12 @@ def store_file( message ):
         # Reach here if there is no previous version of this event
         logger.info(f"NEW WRITE of event {message.content[0]['superevent_id']}")
         write_avro_file( message, logger )
-
+      
 
 def main( message, slackbot ):
 
     #The filtering of messages is done in the got_general file that calls this,
-    #   so we can immidiately act on anything sent to this file
+    #   so we can immediately act on anything sent to this file
 
     #However frbs also have an `importance` parameter—the only broadcast events >0.9,
     #   but recommend 0.98 to avoid false positives
@@ -101,9 +99,6 @@ def main( message, slackbot ):
     #slackbot = slack_bot()
 
 
-    #TODO: #2 add twistd log to this logger
-    logger.info("ADD TWISTD LOGGER TO THIS FILE / FORMAT")
-    #logger.info("************ Starting new session ************")
 
     logger.info("--------------------")
     logger.info(f"Received LVK Notice with superevent ID {message.content[0]['superevent_id']}")
@@ -117,7 +112,7 @@ def main( message, slackbot ):
             #Looking for old notice, deleting if found
             deal_with_retraction( message.content[0], slackbot )
         else:
-            logger.info("This is not a retraction")
+            logger.info("This is a new (or updated) event")
             # Look at current files to see if anything could be updated
             store_file( message )
             # Write to file and compare with stored FRBs
