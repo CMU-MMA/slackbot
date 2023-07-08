@@ -15,18 +15,25 @@ ssl._create_default_https_context = ssl._create_unverified_context
 class slack_bot:
 
     def __init__(self):
-        self._SLACK_TOKEN = SLACK_TOKEN
-        #self.default_channel = 'gw-frb-listener'
+        self.default_channel = 'gw-frb-listener'
 
-        self.client = WebClient(token=SLACK_TOKEN)
+        self.client = WebClient( token=SLACK_TOKEN )
+        self.create_new_channel( self.default_channel )
+
+    def name_to_id( self, name ):
+        response = self.client.conversations_list(types="public_channel, private_channel" )
+        for channel_dict in response["channels"]:
+            if channel_dict["name"] == name:
+                return channel_dict["id"]
+        # will raise channel_not_found error if passed to method
+        raise SlackApiError("Channel not found", {'ok': False, 'error': 'channel_not_found'})
 
 
-    def create_new_channel( self, channel_name:str, verbose:bool=False):
+    def create_new_channel( self, channel_name:str ):
         #Create channel
         try:
             print("Trying to create a new channel...", end='')
             response = self.client.conversations_create(name = channel_name, token = SLACK_TOKEN)
-            if verbose: print(response)
             print("Done")
         except SlackApiError as e:
             if e.response["error"] == "name_taken":
@@ -39,7 +46,7 @@ class slack_bot:
         # If it fails, create #alert-bot-test or similar channel and BE SURE to add the slack bot app to that channel or it cannot send a message to it!
         try:
             print("Trying to send message to ns channel...", end='')
-            response = self.client.chat_postMessage(channel=channel_name, text=message_text)
+            response = self.client.chat_postMessage(channel=self.name_to_id(channel_name), text=message_text)
             if verbose: print(response)
             print("Done")
         except SlackApiError as e:
@@ -91,8 +98,27 @@ class slack_bot:
         except SlackApiError as e:
             if e.response["error"] == 'channel_not_found' and _counter==0:
                 self.create_new_channel(channel_name)
-                self.post_message( title, message_text, channel_name, verbose, _counter=1 )
+                self.post_message( title, message_text, channel_name, _counter=1 )
             else: 
+                print("\nCould not post message. Error: ", e.response["error"])
+
+    def post_skymap( self, file_name, ivorn, channel_name:str=None, _counter:int=0 ):
+        if channel_name is None: channel_name = self.default_channel
+
+        try:
+            response = self.client.files_upload_v2(
+                channel=self.name_to_id( channel_name ),
+                file=file_name,
+                title="Skymap of possible coincident events",
+                initial_comment=f"Skymap showing events {file_name[:-4]} and {ivorn}",
+                )
+        except SlackApiError as e:
+            if e.response["error"] == 'channel_not_found' and _counter==0:
+                self.create_new_channel(channel_name)
+                self.post_skymap( file_name, ivorn, channel_name, _counter=1)
+            elif e.response["error"] == 'missing_scope':
+                print("\nPlease add the following scope authorization on the slack website: ",e.response["needed"])
+            else:
                 print("\nCould not post message. Error: ", e.response["error"])
 
 
