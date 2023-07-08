@@ -24,18 +24,22 @@ def dL_from_DM(frb_dm, frb_ra, frb_dec):
     
     Parameters
     ---------
-    frb_dm : float
+    `frb_dm` : float
         dispersion measure, pc/cm^3
-    frb_ra : float
+    `frb_ra` : float
         ra in deg
-    frb_dec : float
+    `frb_dec` : float
         dec in deg
         
     Returns
     ------
-    dL : float
+    `dL` : float
         calculated luminosity distance
     """
+
+
+    #bns nsbs, also run against catalogue of repeating frb list
+
     # This function is from Mohit Bhardwaj
     # Get z from DM
     c = SkyCoord(ra=frb_ra*u.degree, dec=frb_dec*u.degree)
@@ -44,13 +48,18 @@ def dL_from_DM(frb_dm, frb_ra, frb_dec):
     DM1, tau_sc = pygedm.dist_to_dm(l,b, distance, method='ne2001')
     DM2, tau_sc = pygedm.dist_to_dm(204.0, -6.5, distance, method='ymw16')
     DM_galactic = max(DM1, DM2) # maximum of the two values
-    # Macquart relation
-    z = (frb_dm-DM_galactic)/1000
+    # Macquart relation — maximum redshift constraint
+    z_max = (frb_dm-DM_galactic)/1000
+    z_min = (frb_dm-150-DM_galactic)/1000 #host galactric
+
+
+    #Baysian redshift estimate code
 
     # Get dL from z
     cosmo = FlatLambdaCDM(H0=H0,Om0=0.308)
-    dL = redshift_to_luminosity_distance(z,cosmo)
-    return dL
+    dL_min = redshift_to_luminosity_distance(z_min,cosmo)
+    dL_max = redshift_to_luminosity_distance(z_max,cosmo)
+    return dL_min, dL_max
 
 def create_external_skymap(ra, dec, chime_error):
     """Create a sky map, either a gaussian or a single
@@ -59,16 +68,16 @@ def create_external_skymap(ra, dec, chime_error):
 
     Parameters
     ----------
-    ra : float
+    `ra` : float
         right ascension in deg
-    dec: float
+    `dec` : float
         declination in deg
-    chime_error: float
+    `chime_error` : float
         <95% confidence in deg—really it is max(pos_error_semiminor_deg_95,pos_error_semimajor_deg_95)
 
     Returns
     -------
-    skymap : numpy array
+    `skymap` : numpy array
         sky map array
 
     """
@@ -129,22 +138,22 @@ def calculate_odds(gw_skymap_bytes:bytes, frb_ra, frb_dec, frb_error, frb_index,
 
     Parameters
     ----------
-    gw_skymap_bytes : dict
+    `gw_skymap_bytes` : dict
         bytes for skymap of GW event, as sent in `.avro` notice
-    frb_ra : float
+    `frb_ra` : float
         right ascension of FRB messenger, in deg
-    frb_dec : float
+    `frb_dec` : float
         declination of FRB messenger, in deg
-    frb_error : float
+    `frb_error` : float
         error in FRB localization (in this case, 95% interval)
-    frb_index : int
+    `frb_index` : int
         index of HEALPix location of FRB
-    search_span : float
+    `search_span` : float
         range of temporal search, in days
 
     Returns
     -------
-    odds : float
+    `odds` : float
         odds of common source hypothesis being correct
     '''
     # odds = pi_cr * I_DL * I_omega * I_tc      <-- Equation (2)
@@ -152,7 +161,7 @@ def calculate_odds(gw_skymap_bytes:bytes, frb_ra, frb_dec, frb_error, frb_index,
 
     R_em = 1.6 # day^-1
     del_t = search_span # day 
-    I_DL = distance_overlap(Table.read(BytesIO(gw_skymap_bytes)), DM, frb_index, frb_ra, frb_dec)
+    I_DL_min, I_DL_max = distance_overlap(Table.read(BytesIO(gw_skymap_bytes)), DM, frb_index, frb_ra, frb_dec)
     I_omega = skymap_overlap_integral(create_external_skymap(frb_ra, frb_dec, frb_error), Table.read(BytesIO(gw_skymap_bytes)))
 
-    return 1/(R_em * del_t) * I_DL * I_omega
+    return (1/(R_em * del_t) * I_DL_min * I_omega, 1/(R_em * del_t) * I_DL_max * I_omega)
