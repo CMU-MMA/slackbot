@@ -12,7 +12,7 @@ Can be tested at the command line by running (for example):
    cat test_packet.xml | ./frb_listener.py
 
 """
-
+from os import sep as SEP
 import sys
 import six
 
@@ -21,12 +21,14 @@ import voeventparse
 from slacktalker import slack_bot
 from reading_writing import (
     get_file_names,
+    get_sent_files,
     get_xml_filename,
     read_xml_file,
     write_xml_file,
     read_avro_file,
     alerted_slack,
     remove_xml,
+    remove_fake_xml,
     _clear_xmls
     )
 from comparing_events import determine_relation
@@ -51,7 +53,12 @@ def compare_to_gws( event, slackbot ):
 
 
 
+
 def deal_with_retraction( event, slackbot ):
+    #Weird formatting of the EventIVORN so it doesn't hyperlink to nothing
+    message = f'*RETRACTION*: Please note that `{"ivo://"} {str(event.Citations.EventIVORN)[6:]}` '\
+                'has been retracted; please disregard its previous message.'
+    did_nothing = True
     files = get_file_names( GW=False )
     for file in files:
         temp_file = read_xml_file( file )
@@ -59,16 +66,23 @@ def deal_with_retraction( event, slackbot ):
         if event.Citations.EventIVORN == temp_file.attrib["ivorn"]:
             logger.info(f"Removing {event.Citations.EventIVORN} from saved events...")
             # Did we falsely alert Slack?
-            if event.Who.Description[-4:0] == "True":
-                #Weird formatting of the EventIVORN so it doesn't hyperlink to nothing
-                message = f'*RETRACTION*: Please note that `{"ivo://"} {str(event.Citations.EventIVORN)[6:]}` '\
-                            'has been retracted; please disregard its previous message.'
+            alerted_slack = event.Who.Description[-4:0] == "True"
+            if alerted_slack:
                 slackbot.post_message(title=f"{event.Citations.EventIVORN} Retraction", message_text=message)
             #Delete this file
-            remove_xml( file )
+            remove_xml( file, alerted_slack )
             logger.info("Done")
-            return
-    logger.info("Did not delete anything")
+            did_nothing = False
+            break
+    # dealing with possible retractions within stored data
+    files = get_sent_files( GW=False )
+    for file in files:
+        if file.split(SEP)[-1][:-5] == event.Citations.EventIVORN:
+            # for file to be stored here it means the event alerted slack
+            slackbot.post_message(title=f'{event.Citations.EventIVORN} Retraction', message_text=message)
+            remove_fake_xml(file)
+            break
+    if did_nothing: logger.info("Did not delete anything")
 
 def deal_with_update( event ):
     files = get_file_names( GW=False )
@@ -77,7 +91,7 @@ def deal_with_update( event ):
         # Are we currently storing something that should be updated
         if event.element.attrib["ivorn"] == temp_file.attrib["ivorn"]:
             sent = temp_file.attri["alerted_slack"]
-            remove_xml( file )
+            remove_xml( file, sent )
             write_xml_file( event, logger, alerted_slack=sent)
             return
 
