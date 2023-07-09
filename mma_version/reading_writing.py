@@ -105,7 +105,7 @@ def remove_xml( filename, alerted_slack:bool ):
         creation_time = EPOCH + datetime.timedelta(seconds=os.path.getctime(file))
         if (datetime.datetime.utcnow()-creation_time) > MAX_SAVE:
             os.remove(file)
-    if True:#alerted_slack:
+    if alerted_slack:
         if not os.path.exists( FRB_SENT ):
             os.makedirs( FRB_SENT )
         # make empty file (name and time of create all that matter)
