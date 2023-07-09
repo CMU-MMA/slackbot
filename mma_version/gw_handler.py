@@ -34,6 +34,7 @@ def compare_to_frbs( message, slackbot ):
 
 
 
+
 def deal_with_retraction( content, slackbot ):
     message = f"*RETRACTION*: Please note that *superevent_id {content['superevent_id']}* "\
                  "has been retracted; please disregard the previous message."
@@ -48,20 +49,22 @@ def deal_with_retraction( content, slackbot ):
             alerted_slack = temp_data["alerted_slack"]
             if alerted_slack:
                 slackbot.post_message(title=f"{content['superevent_id']} Retraction", message_text=message)
+                remove_fake_avro(file)
             #Delete this file
-            remove_avro( file, alerted_slack )
+            remove_avro( file )
             logger.info("Done")
             did_nothing = False
             break
-    # dealing with possible retractions within stored data
-    files = get_sent_files( GW=True )
-    for file in files:
-        if file.split(SEP)[-1][:-5] == content['superevent_id']:
-            # for file to be stored here it means the event alerted slack
-            slackbot.post_message(title=f'{content["superevent_id"]} Retraction', message_text=message)
-            remove_fake_avro(file)
-            break
-    if did_nothing: logger.info("Did not delete anything")
+    if did_nothing:
+        # dealing with possible retractions within stored data
+        files = get_sent_files( GW=True )
+        for file in files:
+            if file.split(SEP)[-1][:-5] == content['superevent_id']:
+                # for file to be stored here it means the event alerted slack
+                slackbot.post_message(title=f'{content["superevent_id"]} Retraction', message_text=message)
+                remove_fake_avro(file)
+                break
+        logger.info("Did not delete anything")
 
 def store_file( message ):
     # Always storing skymap, should overwrite if it is an update
@@ -75,13 +78,14 @@ def store_file( message ):
             temp_data = read_avro_file( file )
             if message.content[0]["superevent_id"] == temp_data["superevent_id"]:
                 sent = temp_data["alerted_slack"]
-                remove_avro( file, sent )
+                remove_avro( file )
                 write_avro_file( message, logger, alerted_slack=sent )
                 logger.info(f"UPDATED event {temp_data['superevent_id']}")
                 return
         # Reach here if there is no previous version of this event
         logger.info(f"NEW WRITE of event {message.content[0]['superevent_id']}")
         write_avro_file( message, logger )
+            
 
 def main( message, slackbot ):
 

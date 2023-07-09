@@ -51,9 +51,6 @@ def compare_to_gws( event, slackbot ):
                 alerted_slack( file, get_xml_filename(event.attrib["ivorn"], logger)+".xml", logger)
 
 
-
-
-
 def deal_with_retraction( event, slackbot ):
     #Weird formatting of the EventIVORN so it doesn't hyperlink to nothing
     message = f'*RETRACTION*: Please note that `{"ivo://"} {str(event.Citations.EventIVORN)[6:]}` '\
@@ -69,20 +66,22 @@ def deal_with_retraction( event, slackbot ):
             alerted_slack = event.Who.Description[-4:0] == "True"
             if alerted_slack:
                 slackbot.post_message(title=f"{event.Citations.EventIVORN} Retraction", message_text=message)
+                remove_fake_xml( file )
             #Delete this file
-            remove_xml( file, alerted_slack )
+            remove_xml( file )
             logger.info("Done")
             did_nothing = False
             break
-    # dealing with possible retractions within stored data
-    files = get_sent_files( GW=False )
-    for file in files:
-        if file.split(SEP)[-1][:-5] == event.Citations.EventIVORN:
-            # for file to be stored here it means the event alerted slack
-            slackbot.post_message(title=f'{event.Citations.EventIVORN} Retraction', message_text=message)
-            remove_fake_xml(file)
-            break
-    if did_nothing: logger.info("Did not delete anything")
+    if did_nothing:
+        # dealing with possible retractions within stored data
+        files = get_sent_files( GW=False )
+        for file in files:
+            if file.split(SEP)[-1][:-5] == event.Citations.EventIVORN:
+                # for file to be stored here it means the event alerted slack
+                slackbot.post_message(title=f'{event.Citations.EventIVORN} Retraction', message_text=message)
+                remove_fake_xml(file)
+                break
+        logger.info("Did not delete anything")
 
 def deal_with_update( event ):
     files = get_file_names( GW=False )
@@ -91,7 +90,7 @@ def deal_with_update( event ):
         # Are we currently storing something that should be updated
         if event.element.attrib["ivorn"] == temp_file.attrib["ivorn"]:
             sent = temp_file.attri["alerted_slack"]
-            remove_xml( file, sent )
+            remove_xml( file )
             write_xml_file( event, logger, alerted_slack=sent)
             return
 

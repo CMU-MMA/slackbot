@@ -70,7 +70,7 @@ def _clear_avros():
     for file in files:
         os.remove(os.path.join(GW_DIRECTORY,file))
 
-def remove_avro( filename, alerted_slack:bool ):
+def remove_avro( filename ):
     # first running a regular check to remove any old events that
     #   have no chance of being redacted anymore
     files = get_sent_files( GW=True )
@@ -78,11 +78,6 @@ def remove_avro( filename, alerted_slack:bool ):
         creation_time = EPOCH + datetime.timedelta(seconds=os.path.getctime(file))
         if (datetime.datetime.utcnow()-creation_time) > MAX_SAVE:
             os.remove(file)
-    if alerted_slack:
-        if not os.path.exists( GW_SENT ):
-            os.makedirs( GW_SENT )
-        # make empty file (name and time of create all that matter)
-        open(os.path.join(GW_SENT,filename),'w').close()
 
     # actually removing passed avro
     filename = os.path.join( GW_DIRECTORY, filename )
@@ -97,7 +92,7 @@ def _clear_xmls():
     for file in files:
         os.remove(os.path.join(FRB_DIRECTORY,file) )
 
-def remove_xml( filename, alerted_slack:bool ):
+def remove_xml( filename ):
     # first running a regular check to remove any old events that
     #   have no chance of being redacted anymore
     files = get_sent_files( GW=False )
@@ -105,11 +100,6 @@ def remove_xml( filename, alerted_slack:bool ):
         creation_time = EPOCH + datetime.timedelta(seconds=os.path.getctime(file))
         if (datetime.datetime.utcnow()-creation_time) > MAX_SAVE:
             os.remove(file)
-    if alerted_slack:
-        if not os.path.exists( FRB_SENT ):
-            os.makedirs( FRB_SENT )
-        # make empty file (name and time of create all that matter)
-        open(os.path.join(FRB_SENT,filename),'w').close()
     
     # actually removing passed xml
     filename = os.path.join( FRB_DIRECTORY, filename )
@@ -123,13 +113,23 @@ def alerted_slack( gw_filename, frb_filename, logger ):
     # Need to update files by deleting and then rewriting them
     sent = True
 
+    if not os.path.exists( GW_SENT ):
+        os.makedirs( GW_SENT )
+    if not os.path.exists( FRB_SENT ):
+        os.makedirs( FRB_SENT )
+
     message = read_avro_file( gw_filename )
     os.remove( os.path.join( GW_DIRECTORY,gw_filename) )
     write_avro_file( message, logger, alerted_slack=sent )
+    # make empty file (name and time of create all that matter)
+    open(os.path.join(GW_SENT,gw_filename),'w').close()
 
     voevent = read_xml_file( frb_filename )
     os.remove( os.path.join( FRB_DIRECTORY,frb_filename) )
     write_xml_file( voevent, logger, alerted_slack=sent )
+    # make empty file (name and time of create all that matter)
+    open(os.path.join(FRB_SENT,frb_filename),'w').close()
+
 
 
 # AVRO FUNCTIONS ##########################################
