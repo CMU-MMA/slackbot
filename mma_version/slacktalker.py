@@ -30,40 +30,50 @@ class slack_bot:
 
 
     def create_new_channel( self, channel_name:str ):
+        if len(channel_name) == 0:
+            print("Invalid Channel name: needs to be a non-empty string)")
+            return
+        elif channel_name[0] == '#':
+            channel_name = channel_name[1:]
+            if len(channel_name) == 0:
+                print("Invalid Channel name: needs to be a non-empty string)")
+                return
         #Create channel
         try:
-            print("Trying to create a new channel...", end='')
+            print(f"Trying to create {channel_name}, a new channel...", end='')
             response = self.client.conversations_create(name = channel_name, token = SLACK_TOKEN)
             print("Done")
         except SlackApiError as e:
             if e.response["error"] == "name_taken":
                 print("Done")
+            elif channel_name != channel_name.lower():
+                print("Please provide a name with no capital letters")
             else:
                 print("\nCould not create new channel. Error: ", e.response["error"])
 
-    def post_short_message( self, channel_name, message_text, verbose:bool=False, _counter:int=0 ):
+    def post_short_message( self, message_text, channel_name:str=None, _counter:int=0 ):
+        if channel_name is None: channel_name = self.default_channel
         # This is a message without buttons and stuff. We are assuming #alert-bot-test already exists and the bot is added to it
         # If it fails, create #alert-bot-test or similar channel and BE SURE to add the slack bot app to that channel or it cannot send a message to it!
         try:
-            print("Trying to send message to ns channel...", end='')
-            response = self.client.chat_postMessage(channel=self.name_to_id(channel_name), text=message_text)
-            if verbose: print(response)
+            print(f"Trying to send message to {channel_name} channel...", end='')
+            response = self.client.chat_postMessage(channel=channel_name, text=message_text)
             print("Done")
         except SlackApiError as e:
             if e.response["error"] == 'channel_not_found' and _counter==0:
                 self.create_new_channel(channel_name)
-                self.post_short_message( channel_name, message_text, verbose, _counter=1 )
+                self.post_short_message( channel_name, message_text, _counter=1 )
             else: 
                 print("\nCould not post message. Error: ", e.response["error"])
                             
 
 
-    def post_message( self, title:str, message_text,  channel_name:str, verbose:bool=False, _counter:int=0):
-        #if channel_name is None: channel_name = self.default_channel
+    def post_message( self, title:str, message_text,  channel_name:str=None, _counter:int=0):
+        if channel_name is None: channel_name = self.default_channel
         # This is a message with buttons and stuff. 
         # TODO: add buttons and stuff
         try:
-            print("Trying to send message to event channel...",end='')
+            print(f"Trying to send message to {channel_name} event channel...",end='')
             response = self.client.chat_postMessage(
                                     channel=channel_name,
                                     token = SLACK_TOKEN,
@@ -93,7 +103,6 @@ class slack_bot:
                                                     ]
                                                 }
 	                                          ] )
-            if verbose: print(response)
             print("Done")
         except SlackApiError as e:
             if e.response["error"] == 'channel_not_found' and _counter==0:
@@ -106,12 +115,14 @@ class slack_bot:
         if channel_name is None: channel_name = self.default_channel
 
         try:
+            print(f"Trying to send skymap to {channel_name} channel...",end='')
             response = self.client.files_upload_v2(
                 channel=self.name_to_id( channel_name ),
                 file=file_name,
                 title="Skymap of possible coincident events",
                 initial_comment=f"Skymap showing events {file_name[:-4]} and {ivorn}",
                 )
+            print("Done")
         except SlackApiError as e:
             if e.response["error"] == 'channel_not_found' and _counter==0:
                 self.create_new_channel(channel_name)

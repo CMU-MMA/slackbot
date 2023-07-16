@@ -433,10 +433,10 @@ if __name__ == '__main__':
 
                                 # This is a message without buttons and stuff. We are assuming #alert-bot-test already exists and the bot is added to it
                                 # If it fails, create #alert-bot-test or similar channel and BE SURE to add the slack bot app to that channel or it cannot send a message to it!
-                                slackbot.post_short_message("#bns-alert", message_text )
+                                slackbot.post_short_message( message_text, channel_name="bns-alert", )
     
                                 # This is a message with buttons and stuff to the new channel
-                                slackbot.post_message( instance['superevent_id'], message_text, new_channel_name )
+                                slackbot.post_message( instance['superevent_id'], message_text, channel_name=new_channel_name )
 
 
                         elif (instance['event']['classification']['NSBH'] > 0.15 or best_class == 'NSBH') and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
@@ -565,7 +565,7 @@ if __name__ == '__main__':
                                 # This creates a new slack channel for the alert
                                 slackbot.create_new_channel( new_channel_name )
                                 # This is a message without buttons and stuff.
-                                slackbot.post_short_message("#nsbh-alert", message_text )
+                                slackbot.post_short_message( message_text, channel_name="nsbh-alert" )
                                 # This is a message with buttons and stuff to the new channel
                                 slackbot.post_message( instance['superevent_id'], message_text, new_channel_name )
                             
@@ -699,7 +699,7 @@ if __name__ == '__main__':
                             # If it fails, create #alert-bot-test or similar channel and BE SURE to add the slack bot app to that channel or it cannot send a message to it!
                             # For BBH we are ONLY sending alerts to this channel and NOT creating an individual channel per BBH as that could get unruly...
                             if message_text is not None:
-                                slackbot.post_short_message("#bbh-alert", message_text )
+                                slackbot.post_short_message( message_text, channel_name="bbh-alert" )
                                 
                         else: 
 
@@ -737,7 +737,7 @@ if __name__ == '__main__':
                             Treasure Map Link: {img_link4} \n \
                             "
 
-                            slackbot.post_short_message("#burst-alert", message_text )
+                            slackbot.post_short_message( message_text, channel_name="burst-alert" )
 
 
                         elif instance['event']['group'] != 'CBC' and instance['event']['significant'] == True and instance['alert_type'] == 'UPDATE':
@@ -760,7 +760,7 @@ if __name__ == '__main__':
                             Treasure Map Link: {img_link4} \n \
                             "
 
-                            slackbot.post_short_message("#burst-alert", message_text )
+                            slackbot.post_short_message( message_text, channel_name="burst-alert" )
 
 
                     except KeyError:
@@ -822,7 +822,7 @@ if __name__ == '__main__':
 
                             print(message_text)
 
-                        slackbot.post_short_message("#bbh-alert", message_text )
+                        slackbot.post_short_message( message_text, channel_name="bbh-alert" )
     
                     except KeyError:
                         print('Bad data formatting...skipping message')      
@@ -830,9 +830,9 @@ if __name__ == '__main__':
                 # RETRACTION
                 else: 
                     print("This is a retraction.")
-                    slackbot.post_short_message(new_channel_name, "This alert was retracted." )
-           
-           # If the event is not a mock and is not terrestrial, we call the gw/frb code
+                    slackbot.post_short_message( "This alert was retracted.", message_text=new_channel_name )
+
+            # If the event is not a mock and is not terrestrial, we call the gw/frb code
             if message.content[0]['superevent_id'][0] != 'M' and message.content[0]['event']['classification']['Terrestrial'] < 0.5:
                 gw_handler.main( message, slackbot )  
             
