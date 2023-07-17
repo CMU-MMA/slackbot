@@ -1,14 +1,4 @@
 ############################################################
-# Michael's comments:
-#   I have tried to implement my code with as little change to your existing code as possible.
-#   Things can  be streamlined in the future (at least with the slack message posts). After talking
-#   with Palmese, my code will be called on all events that are not mock / not terrestrial
-#   I have updated this file to use my slacktalker class, just simplifying the post_message calls
-#
-import gw_handler 
-from slacktalker import slack_bot
-#
-############################################################
 # Credit for this bot goes to Ved Shah/Gautham Narayan
 # https://github.com/uiucsn/GW-Bot
 # Written by: Ved Shah (vedgs2@illinois.edu), Gautham Narayan (gsn@illinois.edu) and the UIUCSN team at the Gravity Collective Meeting at UCSC in April 2023
@@ -18,6 +8,8 @@ from slacktalker import slack_bot
 from hop import stream, Stream
 from hop.io import StartPosition
 from hop.auth import Auth
+# convenience class for posting to slack
+from slacktalker import slack_bot
 from slack_token import hop_username
 from slack_token import hop_pw
 ####
@@ -42,6 +34,9 @@ from ligo.skymap.moc import uniq2pixarea
 ############################################################
 # Look into running on spin @ nersc:
 # https://www.nersc.gov/systems/spin/
+############################################################
+# importing potion of GW/FRB system (also need to seperately call twistd comet for frb)
+import gw_handler 
 ############################################################
 #Charlie Kilpatrick's Code for Parsing the Alert (https://github.com/charliekilpatrick/bot):
 def most_likely_classification(classification):
@@ -76,9 +71,6 @@ def area_within_probability(data, cumulative):
     return(total_area)
 
 def parse_notice(record):
-    # Michael: maybe move this filtering of mock events to the beginning of the
-    #           stream loop so that it will immidiately reject these test events?
-
     # Only respond to mock events. Real events have GraceDB IDs like
     # S1234567, mock events have GraceDB IDs like M1234567.
     # NOTE NOTE NOTE replace the conditional below with this commented out
@@ -307,7 +299,7 @@ if __name__ == '__main__':
                         
                         # Setting some preliminary thresholds so that the channel does not get flooded with bad alerts. Adapt based on needs.
                         # Starting with only significant NS and not mock event as the only threshold.
-                        if (instance['event']['classification']['BNS'] > 0.15 or best_class == 'BNS') and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M': 
+                        if (instance['event']['classification']['BNS'] > 0.15 or best_class == 'BNS') and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M': 
                             print("NSNS")
                             #print(instance)
 
@@ -334,7 +326,7 @@ if __name__ == '__main__':
                                 print('notice issue, sending less information')
 
                                 # Creating the message text
-                                message_text = f"@Channel \n \
+                                message_text = f"<!channel> \n \
                                 Superevent ID: *{instance['superevent_id']}*\n \
                                 Significant detection? {instance['event']['significant']} \n \
                                 Group: {instance['event']['group']} \n \
@@ -354,7 +346,7 @@ if __name__ == '__main__':
                                 img_link1a, img_link2a, img_link3a = images_for_update( instance['superevent_id'] )
                                 
                                 # Creating the message text
-                                message_text = f"@Channel \
+                                message_text = f"<!channel> \
                                 \n\n *This is an update alert. Use bilby skymap because better. * \n\n \
                                 Superevent ID: *{instance['superevent_id']}*\n \
                                 Significant detection? {instance['event']['significant']} \n \
@@ -391,7 +383,7 @@ if __name__ == '__main__':
 
                                 # If passes CBC cuts and mock cuts then it creates additional outputs:
                                 # Creating the message text
-                                message_text = f"@channel \n\
+                                message_text = f"<!channel> \n\
                                 *Superevent ID: {instance['superevent_id']}* \n \
                                 Event Time: {notice['event_time']} \n \
                                 Notice Time: {instance['time_created']} \n \
@@ -433,13 +425,13 @@ if __name__ == '__main__':
 
                                 # This is a message without buttons and stuff. We are assuming #alert-bot-test already exists and the bot is added to it
                                 # If it fails, create #alert-bot-test or similar channel and BE SURE to add the slack bot app to that channel or it cannot send a message to it!
-                                slackbot.post_short_message( message_text, channel_name="bns-alert", )
+                                slackbot.post_short_message(message_text, channel_name = "bns-alert",  )
     
                                 # This is a message with buttons and stuff to the new channel
-                                slackbot.post_message( instance['superevent_id'], message_text, channel_name=new_channel_name )
+                                slackbot.post_message( instance['superevent_id'], message_text, channel_name = new_channel_name )
 
 
-                        elif (instance['event']['classification']['NSBH'] > 0.15 or best_class == 'NSBH') and instance['event']['properties']['HasRemnant'] > 0.015 and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
+                        elif (instance['event']['classification']['NSBH'] > 0.15 or best_class == 'NSBH') and instance['event']['classification']['Terrestrial'] < 0.4 and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M':
                             print("NSBH")
                             #print(instance)
 
@@ -466,7 +458,7 @@ if __name__ == '__main__':
                                 print('notice issue, sending less information')
 
                                 # Creating the message text
-                                message_text = f"@channel \n \
+                                message_text = f"<!channel> \n \
                                 Superevent ID: *{instance['superevent_id']}*\n \
                                 Significant detection? {instance['event']['significant']} \n \
                                 Group: {instance['event']['group']} \n \
@@ -487,7 +479,7 @@ if __name__ == '__main__':
                                 
 
                                 # Creating the message text
-                                message_text = f"@channel \
+                                message_text = f"<!channel> \
                                 \n\n *This is an update alert. Use bilby skymap because better. * \n\n \
                                 Superevent ID: *{instance['superevent_id']}*\n \
                                 Significant detection? {instance['event']['significant']} \n \
@@ -524,7 +516,7 @@ if __name__ == '__main__':
 
                                 # If passes CBC cuts and mock cuts then it creates additional outputs:
                                 # Creating the message text
-                                message_text = f"@channel \n \
+                                message_text = f"<!channel> \n \
                                 *Superevent ID: {instance['superevent_id']}* \n \
                                 Event Time {notice['event_time']} \n \
                                 Notice Time {instance['time_created']} \n \
@@ -565,9 +557,9 @@ if __name__ == '__main__':
                                 # This creates a new slack channel for the alert
                                 slackbot.create_new_channel( new_channel_name )
                                 # This is a message without buttons and stuff.
-                                slackbot.post_short_message( message_text, channel_name="nsbh-alert" )
+                                slackbot.post_short_message( message_text, channel_name = "nsbh-alert", )
                                 # This is a message with buttons and stuff to the new channel
-                                slackbot.post_message( instance['superevent_id'], message_text, new_channel_name )
+                                slackbot.post_message( instance['superevent_id'], message_text, channel_name = new_channel_name )
                             
                                 # This is a message with buttons and stuff to the new channel
 
@@ -651,7 +643,7 @@ if __name__ == '__main__':
 
                                 atchannel = ' '
                                 if float(notice['area90']) < 500:
-                                    atchannel = '@channel'
+                                    atchannel = '<!channel>'
 
                                 #print(has_gap)
                                 #print('hi')
@@ -699,7 +691,7 @@ if __name__ == '__main__':
                             # If it fails, create #alert-bot-test or similar channel and BE SURE to add the slack bot app to that channel or it cannot send a message to it!
                             # For BBH we are ONLY sending alerts to this channel and NOT creating an individual channel per BBH as that could get unruly...
                             if message_text is not None:
-                                slackbot.post_short_message( message_text, channel_name="bbh-alert" )
+                                slackbot.post_short_message( message_text, channel_name = 'bbh-alert' )
                                 
                         else: 
 
@@ -737,7 +729,7 @@ if __name__ == '__main__':
                             Treasure Map Link: {img_link4} \n \
                             "
 
-                            slackbot.post_short_message( message_text, channel_name="burst-alert" )
+                            slackbot.post_short_message( message_text, channel_name = "burst-alert", )
 
 
                         elif instance['event']['group'] != 'CBC' and instance['event']['significant'] == True and instance['alert_type'] == 'UPDATE':
@@ -760,7 +752,7 @@ if __name__ == '__main__':
                             Treasure Map Link: {img_link4} \n \
                             "
 
-                            slackbot.post_short_message( message_text, channel_name="burst-alert" )
+                            slackbot.post_short_message( message_text, channel_name = "burst-alert", )
 
 
                     except KeyError:
@@ -790,7 +782,7 @@ if __name__ == '__main__':
 
                             atchannel = ' '
                             if float(notice['area90']) < 150:
-                                atchannel = '@channel'
+                                atchannel = '<!channel>'
 
                             message_text = f"{atchannel} \n \
                             *Superevent ID: {instance['superevent_id']}* \n \
@@ -822,21 +814,31 @@ if __name__ == '__main__':
 
                             print(message_text)
 
-                        slackbot.post_short_message( message_text, channel_name="bbh-alert" )
+                        slackbot.post_short_message( message_text, channel_name = "low-sig-alerts",)
     
                     except KeyError:
                         print('Bad data formatting...skipping message')      
 
                 # RETRACTION
                 else: 
-                    print("This is a retraction.")
-                    slackbot.post_short_message( "This alert was retracted.", message_text=new_channel_name )
+                    if instance['superevent_id'][0] != 'M' and best_class == 'BBH': 
+                        print("This is a retraction.")
+                        slackbot.post_short_message( "This alert was retracted.", channel_name = 'bbh-alert', )
 
+                    elif instance['superevent_id'][0] != 'M' and best_class != 'BBH': 
+                        print("This is a retraction.")
+                        slackbot.post_short_message( "This alert was retracted.", channel_name = new_channel_name, )
+
+                        if (instance['event']['classification']['NSBH'] > 0.15 or best_class == 'NSBH'):
+                            slackbot.post_short_message( "This alert was retracted.", channel_name = 'nsbh-alert', )
+                        elif (instance['event']['classification']['BNS'] > 0.15 or best_class == 'BNS'):
+                            slackbot.post_short_message("This alert was retracted.", channel_name = 'bns-alert', )
+                        else:
+                            print("Ignoring.")
+
+                    else:
+                        print("Mock Event, ignoring.")
+           
             # If the event is not a mock and is not terrestrial, we call the gw/frb code
             if message.content[0]['superevent_id'][0] != 'M' and message.content[0]['event']['classification']['Terrestrial'] < 0.5:
                 gw_handler.main( message, slackbot )  
-            
-
-        
-
-                    
