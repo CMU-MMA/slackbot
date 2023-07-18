@@ -12,6 +12,7 @@ from reading_writing import (
     remove_avro,
     remove_fake_avro,
     save_skymap,
+    delete_skymap,
     alerted_slack,
     _clear_avros
     )
@@ -36,6 +37,7 @@ def compare_to_frbs( message, slackbot ):
 
 
 def deal_with_retraction( content, slackbot ):
+    delete_skymap( content )
     message = f"*RETRACTION*: Please note that *superevent_id {content['superevent_id']}* "\
                  "has been retracted; please disregard the previous message."
     did_nothing = True

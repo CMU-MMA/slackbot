@@ -253,3 +253,8 @@ def get_skymap_name( notice, logger ):
             logger.error( f"{file_name} does not exist but should")
             return ""
     return file_name
+
+def delete_skymap( notice ):
+    del_path = os.path.join( SKYMAPS_DIRECTORY,notice['superevent_id']+".fits")
+    if os.path.exists( del_path ):
+        os.remove(del_path)
