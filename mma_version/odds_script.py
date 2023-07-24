@@ -47,7 +47,7 @@ def dL_from_DM(frb_dm, frb_ra, frb_dec):
     distance = 30000 # in pc
     DM1, tau_sc = pygedm.dist_to_dm(l,b, distance, method='ne2001')
     DM2, tau_sc = pygedm.dist_to_dm(204.0, -6.5, distance, method='ymw16')
-    DM_galactic = max(DM1, DM2) # maximum of the two values
+    DM_galactic = max(DM1, DM2).value # maximum of the two values
     # Macquart relation — maximum redshift constraint
     z_max = (frb_dm-DM_galactic)/1000
     z_min = (frb_dm-150-DM_galactic)/1000 #host galactric
