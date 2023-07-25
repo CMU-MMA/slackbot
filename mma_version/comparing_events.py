@@ -29,6 +29,7 @@ def parse_gw( notice, skymap_bytes ):
     else:
         far = float('%2.4f'%far)
     ext, ext_details = 'None', 'None'
+    
     if notice['external_coinc'] != None:
         ext = '*External Detection*'
         joint_far = 1/notice['external_coinc']['time_sky_position_coincidence_far'] / (3600.0 * 24 * 365.25)
@@ -36,7 +37,7 @@ def parse_gw( notice, skymap_bytes ):
             f"time_difference: {notice['external_coinc']['time_difference']} seconds,\n\t\t"\
             f"search:  {notice['external_coinc']['search']},\n\t\t"\
             f"joint FAR: 1 per {joint_far} years"
-
+    
     superevent_id = notice["superevent_id"]
     gracedb = f"https://example.org/superevents/{superevent_id}/view"
     img_link1 = f"https://gracedb.ligo.org/apiweb/superevents/{superevent_id}/files/bayestar.png"
@@ -46,10 +47,15 @@ def parse_gw( notice, skymap_bytes ):
 
     skymap = Table.read(BytesIO(skymap_bytes))
 
+    try:
+        logbci = '%7.2f'%skymap.meta["LOGBCI"]
+    except KeyError:
+        logbci = "N/A"
     level, ipix = ah.uniq_to_level_ipix(
             skymap[np.argmax(skymap['PROBDENSITY'])]['UNIQ'])
     ra, dec = ah.healpix_to_lonlat(ipix, ah.level_to_nside(level),
                                    order='nested')
+
     #Preparing message for slack #:7.2f
     message_text = f"Gravitational Wave Data: \n\n\
         *Superevent ID: {notice['superevent_id']}* \n\
@@ -58,7 +64,7 @@ def parse_gw( notice, skymap_bytes ):
         Alert Type: {notice['alert_type']}\n\
         Group: {notice['event']['group']} \n\
         FAR: 1 per {far} years \n\
-        log BCI: {skymap.meta['LOGBCI']:7.2f} \n\
+        log BCI: {logbci} \n\
         90% Area: *{gw_area_within( skymap_bytes, 0.9):.2f}* deg^2\n\
         50% Area: *{gw_area_within( skymap_bytes, 0.5):.2f}* deg^2\n\
         Significant detection? *{notice['event']['significant']}* \n\
@@ -116,11 +122,11 @@ def parse_frb( voevent ):
     known_source = groups['event parameters']['known_source_name']['value'] if groups['event parameters']['known_source_name']['value'] != '' else "None"
 
     message_text = f"FRB Data:\n\n\
-        IVORN: {voevent.attrib['ivorn']}\n\
+        IVORN: ivo:// {str(voevent.attrib['ivorn'])[6:]}\n\
         Event No: {groups['event parameters']['event_no']['value']}\n\
         Known Source: {known_source}\n\
         Above Source Association: {voevent.Why.Inference.attrib['probability']}\n\
-        Event Time (@400 MHz,correction for dispersion):{groups['event parameters']['timestamp_utc']['value']}\n\
+        Event Time (@400 MHz,correction for dispersion): {groups['event parameters']['timestamp_utc']['value']}\n\
         Notice Time: {voevent.Who.Date}\n\
         Dispersion Measure: {groups['event parameters']['dm']['value']} {groups['event parameters']['event_no']['unit']}\n\
         Event Type: {groups['event parameters']['event_type']['value']}\n\
@@ -133,12 +139,19 @@ def parse_frb( voevent ):
 #################################################
 
 def parse_message(gw_data, skymap_bytes, frb_data, odds):
-    return f"*Possible Associated Event*\n\
-    Odds of Common Source:\
-        minimum FRB z: {odds[0]:.2E}\n\
-        maximum FRB z: {odds[1]:.2E}\n\n\n\
-    {parse_gw(gw_data, skymap_bytes)}\n\n\
-    {parse_frb(frb_data)}"
+    if type(odds) == str:
+        message =  f"*Possible Associated Event*\n\
+        Odds of Common Source: {odds}\n\n\n\
+        {parse_gw(gw_data, skymap_bytes)}\n\n\
+        {parse_frb(frb_data)}"
+    else:
+        message =  f"*Possible Associated Event*\n\
+        Odds of Common Source:\n\
+            minimum FRB z: {odds[0]:.2E}\n\
+            maximum FRB z: {odds[1]:.2E}\n\n\n\
+        {parse_gw(gw_data, skymap_bytes)}\n\n\
+        {parse_frb(frb_data)}"
+    return message
 
 #################################################
 
@@ -234,12 +247,12 @@ def determine_relation( gw_data, frb_data, slackbot, logger ):
             if frb_pixel != -1:
                 frb_ra, frb_dec, frb_error = frb_location( frb_data )
                 dm = vp.get_grouped_params(frb_data)['event parameters']['dm']['value']
-                odds = calculate_odds(skymap_bytes, frb_ra, frb_dec, frb_error, frb_pixel, float(dm), np.abs((TIME_BEFORE_GW + TIME_AFTER_GW)/ datetime.timedelta(days=1)))
+                odds = calculate_odds(skymap_bytes, frb_ra, frb_dec, frb_error, frb_pixel, float(dm), np.abs((TIME_BEFORE_GW + TIME_AFTER_GW)/ datetime.timedelta(days=1)), logger)
                 message = parse_message(gw_data, skymap_bytes, frb_data, odds)
-                image_filename = plot_skymap( get_skymap_name( gw_data, logger ) ,frb_ra, frb_dec)
+                image_filename = plot_skymap( get_skymap_name( gw_data, logger ), frb_ra, frb_dec, logger)
                 
-                slackbot.post_message( title="GW-FRB Coincidence Found", message_text=message)
-                slackbot.post_skymap(image_filename, frb_data.attrib['ivorn'])
+                slackbot.post_message( "GW-FRB Coincidence Found", message)
+                if image_filename != "": slackbot.post_skymap(image_filename, f"ivo:// {frb_data.attrib['ivorn'][6:]}")
 
                 os.remove(image_filename)
                 return True

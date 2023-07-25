@@ -24,7 +24,6 @@ def plot_skymap( filename, ra, dec, logger ):
         return ""
     fits_filename = filename
     png_filename = fits_filename[:-5]+".png"
-    print(fits_filename)
     logger.info(f"Writing image to {png_filename}")
 
 
