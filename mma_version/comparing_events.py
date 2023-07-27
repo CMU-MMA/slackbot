@@ -252,7 +252,7 @@ def determine_relation( gw_data, frb_data, slackbot, logger ):
                 image_filename = plot_skymap( get_skymap_name( gw_data, logger ), frb_ra, frb_dec, logger)
                 
                 slackbot.post_message( "GW-FRB Coincidence Found", message)
-                if image_filename != "": slackbot.post_skymap(image_filename, f"ivo:// {frb_data.attrib['ivorn'][6:]}")
+                if image_filename != "": slackbot.post_skymap(os.path.split(image_filename)[-1], f"ivo:// {frb_data.attrib['ivorn'][6:]}")
 
                 os.remove(image_filename)
                 return True

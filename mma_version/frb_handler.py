@@ -113,20 +113,26 @@ def handle_voevent(event):
     logger.info("--------------------")
     logger.info(f"Received VOEvent with IVORN {event.attrib['ivorn']}")
 
-    if event.attrib["ivorn"][22:36] == "OBS-RETRACTION":
+    if event.attrib["role"] == 'test':
+        logger.info("Test notice, not handling")
+    elif event.attrib["ivorn"][22:36] == "OBS-RETRACTION":
         logger.info("This is a retraction")
         #Looking for old notice, deleting if found
         deal_with_retraction( event, slackbot )
-    else:
-        logger.info("This is a new (or updated) event")
+    elif event.attrib["ivorn"][22:35] == "FRB-DETECTION" or event.attrib["ivorn"][22:36] == "FRB-SUBSEQUENT":
+        logger.info("This is not a retraction")
+        # not sure updates actually happen
         if event.attrib["role"] == "utility":
-            logger.info("this is an update")
+            logger.info("This is an update")
             # Look at current files to see if anything could be updated
             deal_with_update( event )
         else:
+            logger.info("Saving new write")
             write_xml_file( event, logger )
         # Write to file and compare with stored FRBs
         compare_to_gws( event, slackbot )
+    else:
+        logger.info("Unable to handle this event.")
 
 
 if __name__ == '__main__':
