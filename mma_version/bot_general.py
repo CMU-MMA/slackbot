@@ -853,5 +853,5 @@ if __name__ == '__main__':
         yag = yagmail.SMTP('chime.dummy', 'qynrwegcbiabqybd')
         contents = [f'Hi,\n There was an exception and the bot is now not runnning. Please go to Vera to fix and start again!\n\n\
                     Output of the exception: {str(e)}\n\nFull Traceback:\n{traceback.format_exc()}']
-        yag.send('mdm2@andrew.cmu.edu', 'Listener is not running', contents)
+        yag.send(['oconnorb@gwmail.Gwu.edu','mdm2@andrew.cmu.edu'], 'Listener is not running', contents)
         raise
