@@ -13,8 +13,12 @@ Can be tested at the command line by running (for example):
 
 """
 from os import sep as SEP
+import os
+os.environ['NUMEXPR_MAX_THREADS'] = '4' #to stop log warning
 import sys
 import six
+import yagmail
+import traceback
 
 import voeventparse
 
@@ -29,6 +33,7 @@ from reading_writing import (
     alerted_slack,
     remove_xml,
     remove_fake_xml,
+    archive_xml,
     _clear_xmls
     )
 from comparing_events import determine_relation
@@ -49,6 +54,8 @@ def compare_to_gws( event, slackbot ):
             if match:
                 # need to note that we sent this event!
                 alerted_slack( file, get_xml_filename(event.attrib["ivorn"], logger)+".xml", logger)
+
+
 
 
 def deal_with_retraction( event, slackbot ):
@@ -104,8 +111,17 @@ def main():
         # Py3:
         stdin = sys.stdin.buffer.read()
     v = voeventparse.loads(stdin)
-    handle_voevent(v)
-    return 0
+    try:
+        handle_voevent(v)
+        return 0
+    except Exception as e:                                                                           
+        logger.info("problem with running frb code, now in exception block, emailing and raising error")
+        logger.info(e) 
+        yag = yagmail.SMTP('chime.dummy', 'qynrwegcbiabqybd')
+        contents = [f'Hi,\n There was an exception and the bot may not be runnning (FRB threw it). Please go to Vera to fix and start again!\n\n\
+                    Output of the exception: {str(e)}\n\nFull Traceback:\n{traceback.format_exc()}']
+        yag.send('mdm2@andrew.cmu.edu', 'Listener may not be running', contents)
+        raise
 
 def handle_voevent(event):
     slackbot = slack_bot()
@@ -113,26 +129,29 @@ def handle_voevent(event):
     logger.info("--------------------")
     logger.info(f"Received VOEvent with IVORN {event.attrib['ivorn']}")
 
+    
     if event.attrib["role"] == 'test':
         logger.info("Test notice, not handling")
-    elif event.attrib["ivorn"][22:36] == "OBS-RETRACTION":
-        logger.info("This is a retraction")
-        #Looking for old notice, deleting if found
-        deal_with_retraction( event, slackbot )
-    elif event.attrib["ivorn"][22:35] == "FRB-DETECTION" or event.attrib["ivorn"][22:36] == "FRB-SUBSEQUENT":
-        logger.info("This is not a retraction")
-        # not sure updates actually happen
-        if event.attrib["role"] == "utility":
-            logger.info("This is an update")
-            # Look at current files to see if anything could be updated
-            deal_with_update( event )
-        else:
-            logger.info("Saving new write")
-            write_xml_file( event, logger )
-        # Write to file and compare with stored FRBs
-        compare_to_gws( event, slackbot )
     else:
-        logger.info("Unable to handle this event.")
+        archive_xml( event )
+        if event.attrib["ivorn"][22:36] == "OBS-RETRACTION":
+            logger.info("This is a retraction")
+            #Looking for old notice, deleting if found
+            deal_with_retraction( event, slackbot )
+        elif event.attrib["ivorn"][22:35] == "FRB-DETECTION" or event.attrib["ivorn"][22:36] == "FRB-SUBSEQUENT":
+            logger.info("This is not a retraction")
+            # not sure updates actually happen
+            if event.attrib["role"] == "utility":
+                logger.info("This is an update")
+                # Look at current files to see if anything could be updated
+                deal_with_update( event )
+            else:
+                logger.info("Saving new write")
+                write_xml_file( event, logger )
+            # Write to file and compare with stored FRBs
+            compare_to_gws( event, slackbot )
+        else:
+            logger.info("Unable to handle this event.")
 
 
 if __name__ == '__main__':

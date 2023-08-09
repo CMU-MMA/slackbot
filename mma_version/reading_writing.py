@@ -15,7 +15,8 @@ FRB_DIRECTORY = os.path.join(os.getcwd(),"FRB_XMLs")
 FRB_SENT = os.path.join(FRB_DIRECTORY,"FRB_sent")
 GW_DIRECTORY = os.path.join(os.getcwd(),"GW_Avros")
 GW_SENT = os.path.join(GW_DIRECTORY,"GW_sent")
-SKYMAPS_DIRECTORY = '/hildafs/projects/phy220048p/share/skymaps_bot_o4'
+SKYMAPS_DIRECTORY = os.path.join(os.getcwd(),"all_skymaps")
+FRB_ARCHIVE = os.path.join(os.getcwd(),"archive_FRB")
 
 AVRO_SCHEMA = None
 
@@ -206,7 +207,7 @@ def get_xml_filename( input_string, logger ):
             if x in string.digits + string.ascii_letters + "_."
         )
     except ValueError:
-        logger.error(f"VOEvent with IVORN {input_string} has foreign form, this should not happen")
+        if logger is not None: logger.error(f"VOEvent with IVORN {input_string} has foreign form, this should not happen")
         #This works but gives an ugly result
         return "".join([c for c in input_string if c.isalpha() or c.isdigit()]).rstrip()
 
@@ -228,6 +229,15 @@ def write_xml_file( event, logger, alerted_slack=False)->str:
             vp.dump(event, f)
         logger.debug("Done")
     return file_name
+
+def archive_xml( event ):
+    if not os.path.exists( FRB_ARCHIVE ):
+        os.makedirs( FRB_ARCHIVE )
+    file_name = os.path.join( FRB_ARCHIVE, get_xml_filename(event.attrib["ivorn"], None)+".xml")
+
+    with write_lock(file_name):
+        with open( file_name , 'wb') as f:
+            vp.dump(event, f)
 
 
 ###############################################################################

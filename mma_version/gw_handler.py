@@ -1,6 +1,16 @@
 from os import sep as SEP
+import os
+os.environ['NUMEXPR_MAX_THREADS'] = '4' #to stop log warning
+import sys
+import logging
 from time import sleep
+import yagmail
+import traceback
 
+from hop import Stream
+from hop.io import StartPosition
+from pprint import pprint
+from hop.auth import Auth 
 
 from slacktalker import slack_bot
 from reading_writing import (
@@ -23,6 +33,14 @@ logger = log_setup.logger("GW_")
     
 ############################################################
 
+#Significance criteria: frbs also have an `importance` parameter—the only broadcast events >0.9, but recommend 0.98 to avoid false positives
+'''
+if instance['event']['classification']['BNS'] > 0.5: #and instance['event']['significant'] == True: # && instance['superevent_id'][0] != 'M':
+elif instance['event']['classification']['NSBH'] > 0.5:
+elif instance['event']['classification']['BBH'] > 0.8 and instance['event']['significant']:
+elif instance['event']['classification']['terrestrial'] < 0.05 and instance['event']['significant']:
+'''
+
 
 def compare_to_frbs( message, slackbot ):
     #FRB file names
@@ -32,7 +50,6 @@ def compare_to_frbs( message, slackbot ):
         if match:
             # We alerted slack!
             alerted_slack( message.content[0]['superevent_id']+".avro", file, logger )
-
 
 
 
@@ -106,20 +123,20 @@ def main( message, slackbot ):
 
     # Schema for data available at https://emfollow.docs.ligo.org/userguide/content.html#kafka-notice-gcn-scimma
     # or simply message.schema
-    if message.content[0]['superevent_id'][0] != 'M':
+    if message.content[0]['superevent_id'][0] == 'M':
+        logger.info("Mock event, not handling")
+    else:
         # If this is a retraction, we need to see if we still have the now invalid initial notice
         if message.content[0]["alert_type"] == "RETRACTION":
             logger.info("This is a retraction")
             #Looking for old notice, deleting if found
             deal_with_retraction( message.content[0], slackbot )
         else:
-            logger.info("This is a new (or updated) event")
+            logger.info("This is not a retraction")
             # Look at current files to see if anything could be updated
             store_file( message )
             # Write to file and compare with stored FRBs
             compare_to_frbs( message, slackbot )
-    else:
-        logger.warning("This is a MOCK event, something is wrong...")
 
 
     sleep(0.5)

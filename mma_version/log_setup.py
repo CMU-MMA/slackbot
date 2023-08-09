@@ -9,5 +9,5 @@ def logger(name):
                         datefmt="%Y-%m-%dT%H:%M:%S%z"
                         )
     logger = logging.getLogger(name)
-    logger.handlers.append(logging.StreamHandler(sys.stdout))
+    #logger.handlers.append(logging.StreamHandler(sys.stdout))
     return logger

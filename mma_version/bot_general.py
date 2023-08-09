@@ -700,19 +700,18 @@ if __name__ == '__main__':
                     except KeyError:
                         print('Bad data formatting...skipping message')         
 
-                #BURST EVENT
-                elif instance['superevent_id'][0] != 'M' and instance['alert_type'] != 'RETRACTION':
-                # Michael: I don't think this elif block will ever run: anything that could pass
-                #               instance['superevent_id'][0] != 'M' and instance['alert_type'] != 'RETRACTION'
-                #          will already have passed
-                #               instance["alert_type"] != "RETRACTION"
-                #           which is the initial if statement
+
                     try:
 
-                        if instance['event']['group'] != 'CBC' and instance['event']['significant'] == True:
+                        print("Trying for burst...")
+
+
+                        if instance['event']['group'] != 'CBC' and instance['event']['significant'] == True and instance['superevent_id'][0] != 'M' and instance['alert_type'] != 'RETRACTION':
                             print("burst")
 
                             new_channel_name = '#burst-alert'
+
+                            print(new_channel_name)
 
                             print("TO DO: Area filtering for these events - and creation of similar channel for low significance events that are well localized.")
 
@@ -722,12 +721,13 @@ if __name__ == '__main__':
                             Superevent ID: *{instance['superevent_id']}*\n \
                             Significant detection? {instance['event']['significant']} \n \
                             Group: {instance['event']['group']} \n \
-                            Classification Probabilities: {notice['probabilities']}\n \
                             Skymap Image: {img_link1} \n \
                             Bayestar Volume Image: {img_link2} \n \
                             Bayestar Skymap Download Link (Click to download): {img_link3} \n \
                             Treasure Map Link: {img_link4} \n \
                             "
+
+                            print(message_text)
 
                             slackbot.post_short_message( message_text, channel_name = "burst-alert", )
 
@@ -758,87 +758,88 @@ if __name__ == '__main__':
                     except KeyError:
                         print('Bad data formatting...skipping message')   
 
+            
+
+
                     try: 
 
-                        print("Parsing the notice")
-                        notice = parse_notice(message.content[0])
-                        print("Parsed the notice properly")
+                        print("Trying for low-sig...")
+                        
 
-                        if float(notice['area90']) < 250 and instance['event']['significant'] != True and instance['event']['classification']['Terrestrial'] < 0.4:
+                        if instance['event']['group'] == 'CBC' and instance['event']['significant'] != True and instance['event']['classification']['Terrestrial'] < 0.4:
                             print("Low Significance Alert")
 
                             new_channel_name = '#low-sig-alerts'
 
-                            gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
-                            print("Notice passes all checks - sending more details:")
+                            print("Parsing the notice")
+                            notice = parse_notice(message.content[0])
+                            print("Parsed the notice properly")
 
-                            if notice['external'] != None:
-                                ext = 'THERE WAS AN EXTERNAL DETECTION!! RAPID RESPONSE REQUIRED!!'
-                                joint_far = 1/notice['external']['time_sky_position_coincidence_far'] / (3600.0 * 24 * 365.25)
-                                ext_details = f"Observatory: {notice['external']['observatory']}, time_difference: {notice['external']['time_difference']} seconds, search:  {notice['external']['search']}, joint FAR:  {joint_far} years"
-                            else: 
-                                ext = 'None... :('
-                                ext_details = 'None'
+                            print("sky area = "+notice['area90'])
 
-                            atchannel = ' '
-                            if float(notice['area90']) < 150:
-                                atchannel = '<!channel>'
+                            if float(notice['area90']) < 250:
 
-                            message_text = f"{atchannel} \n \
-                            *Superevent ID: {instance['superevent_id']}* \n \
-                            Event Time {notice['event_time']} \n \
-                            Notice Time {instance['time_created']} \n \
-                            Event Type: {notice['event_type']}\n \
-                            Alert Type: {notice['alert_type']}\n \
-                            Group: {instance['event']['group']} \n \
-                            FAR: 1 per {notice['far']} years \n \
-                            log BCI: {notice['logbci']} \n \
-                            90% Area: *{notice['area90' ]}* \n \
-                            50% Area: *{notice['area50' ]}* \n \
-                            Significant detection? *{instance['event']['significant']}* \n \
-                            Classification Probabilities: {notice['probabilities']}\n \
-                            Most Likely Classification: {notice['best_class']}\n \
-                            Has_NS: *{notice['has_ns' ]}* \n \
-                            Has_Remnant: *{notice['has_remnant' ]}* \n \
-                            Has_Mass_Gap: {notice['has_gap']}\n \
-                            Distance (Mpc): *{notice['dist_mean']} with error {notice['dist_std']}* \n \
-                            Detection pipeline: {notice['pipe']}\n \
-                            Detection instruments: {notice['inst']}\n \
-                            Any external detection: {ext}\n \
-                            External Detection Details: {ext_details} \n \
-                            Skymap Image: {img_link1} \n \
-                            Bayestar Volume Image: {img_link2} \n \
-                            Bayestar Skymap Download Link (Click to download): {img_link3} \n \
-                            Treasure Map Link: {img_link4} \n \
-                            "   
+                                print("Area less than 250 sq deg, sending to channel!")
 
-                            print(message_text)
+                                gracedb, img_link1, img_link2, img_link3, img_link4 = gracedb_bayestar_and_treasuremap(instance['superevent_id'])
+                                print("Notice passes all checks - sending more details:")
 
-                        slackbot.post_short_message( message_text, channel_name = "low-sig-alerts",)
+                                if notice['external'] != None:
+                                    ext = 'THERE WAS AN EXTERNAL DETECTION!! RAPID RESPONSE REQUIRED!!'
+                                    joint_far = 1/notice['external']['time_sky_position_coincidence_far'] / (3600.0 * 24 * 365.25)
+                                    ext_details = f"Observatory: {notice['external']['observatory']}, time_difference: {notice['external']['time_difference']} seconds, search:  {notice['external']['search']}, joint FAR:  {joint_far} years"
+                                else: 
+                                    ext = 'None... :('
+                                    ext_details = 'None'
+
+                                atchannel = ' '
+                                if float(notice['area90']) < 150:
+                                    atchannel = '<!channel>'
+
+                                message_text = f"{atchannel} \n \
+                                *Superevent ID: {instance['superevent_id']}* \n \
+                                Event Time {notice['event_time']} \n \
+                                Notice Time {instance['time_created']} \n \
+                                Event Type: {notice['event_type']}\n \
+                                Alert Type: {notice['alert_type']}\n \
+                                Group: {instance['event']['group']} \n \
+                                FAR: 1 per {notice['far']} years \n \
+                                log BCI: {notice['logbci']} \n \
+                                90% Area: *{notice['area90' ]}* \n \
+                                50% Area: *{notice['area50' ]}* \n \
+                                Significant detection? *{instance['event']['significant']}* \n \
+                                Classification Probabilities: {notice['probabilities']}\n \
+                                Most Likely Classification: {notice['best_class']}\n \
+                                Has_NS: *{notice['has_ns' ]}* \n \
+                                Has_Remnant: *{notice['has_remnant' ]}* \n \
+                                Has_Mass_Gap: {notice['has_gap']}\n \
+                                Distance (Mpc): *{notice['dist_mean']} with error {notice['dist_std']}* \n \
+                                Detection pipeline: {notice['pipe']}\n \
+                                Detection instruments: {notice['inst']}\n \
+                                Any external detection: {ext}\n \
+                                External Detection Details: {ext_details} \n \
+                                Skymap Image: {img_link1} \n \
+                                Bayestar Volume Image: {img_link2} \n \
+                                Bayestar Skymap Download Link (Click to download): {img_link3} \n \
+                                Treasure Map Link: {img_link4} \n \
+                                "   
+
+                                print(message_text)
+
+                                slackbot.post_short_message( message_text, channel_name = "low-sig-alerts",)
     
                     except KeyError:
                         print('Bad data formatting...skipping message')      
 
                 # RETRACTION
                 else: 
-                    if instance['superevent_id'][0] != 'M' and best_class == 'BBH': 
-                        print("This is a retraction.")
-                        slackbot.post_short_message( "This alert was retracted.", channel_name = 'bbh-alert', )
-
-                    elif instance['superevent_id'][0] != 'M' and best_class != 'BBH': 
+                    if instance['superevent_id'][0] != 'M': 
                         print("This is a retraction.")
                         slackbot.post_short_message( "This alert was retracted.", channel_name = new_channel_name, )
 
-                        if (instance['event']['classification']['NSBH'] > 0.15 or best_class == 'NSBH'):
-                            slackbot.post_short_message( "This alert was retracted.", channel_name = 'nsbh-alert', )
-                        elif (instance['event']['classification']['BNS'] > 0.15 or best_class == 'BNS'):
-                            slackbot.post_short_message("This alert was retracted.", channel_name = 'bns-alert', )
-                        else:
-                            print("Ignoring.")
-
                     else:
-                        print("Mock Event, ignoring.")
+                        print("Mock Event, ignoring the retraction.")
            
-            # If the event is not a mock and is not terrestrial, we call the gw/frb code
+           # If the event is not a mock and is not terrestrial, we call the gw/frb code
             if message.content[0]['superevent_id'][0] != 'M' and message.content[0]['event']['classification']['Terrestrial'] < 0.5:
                 gw_handler.main( message, slackbot )  

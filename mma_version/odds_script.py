@@ -136,7 +136,7 @@ def calculate_odds(gw_skymap_bytes:bytes, frb_ra, frb_dec, frb_error, frb_index,
 
     Parameters
     ----------
-    `gw_skymap_bytes` : dict
+    `gw_skymap_bytes` : bytes
         bytes for skymap of GW event, as sent in `.avro` notice
     `frb_ra` : float
         right ascension of FRB messenger, in deg
@@ -152,7 +152,7 @@ def calculate_odds(gw_skymap_bytes:bytes, frb_ra, frb_dec, frb_error, frb_index,
 
     Returns
     -------
-    `odds` : tuple, of 2 floats
+    `odds` : tuple, of 2 floats, OR string of error
         odds of common source hypothesis being correct for min and max FRB location
     '''
     # odds = pi_cr * I_DL * I_omega * I_tc      <-- Equation (2)

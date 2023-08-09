@@ -24,7 +24,7 @@ def plot_skymap( filename, ra, dec, logger ):
         return ""
     fits_filename = filename
     png_filename = fits_filename[:-5]+".png"
-    logger.info(f"Writing image to {png_filename}")
+    #logger.info(f"Writing image to {png_filename}")
 
 
     skymap, metadata = io.fits.read_sky_map( fits_filename, nest=None )

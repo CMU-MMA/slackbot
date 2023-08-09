@@ -81,7 +81,6 @@ def parse_gw( notice, skymap_bytes ):
         Detection instruments: {notice['event']['instruments']}\n\
         Any external detection: {ext}\n\
         External Detection Details: {ext_details} \n\
-        Join Related Channel: #{notice['superevent_id'].lower()} \n\
         Skymap Image: {img_link1} \n\
         Bayestar Volume Image: {img_link2} \n\
         Bayestar Skymap Download Link (Click to download): {img_link3} \n\
@@ -252,9 +251,9 @@ def determine_relation( gw_data, frb_data, slackbot, logger ):
                 image_filename = plot_skymap( get_skymap_name( gw_data, logger ), frb_ra, frb_dec, logger)
                 
                 slackbot.post_message( "GW-FRB Coincidence Found", message)
-                if image_filename != "": slackbot.post_skymap(os.path.split(image_filename)[-1], f"ivo:// {frb_data.attrib['ivorn'][6:]}")
-
-                os.remove(image_filename)
+                if image_filename != "":
+                    slackbot.post_skymap( image_filename, f"ivo:// {frb_data.attrib['ivorn'][6:]}")
+                    os.remove(image_filename)
                 return True
         else:
             logger.info("Does not have skymap")
