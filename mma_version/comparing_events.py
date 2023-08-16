@@ -69,8 +69,6 @@ def parse_gw( notice, skymap_bytes ):
         50% Area: *{gw_area_within( skymap_bytes, 0.5):.2f}* deg^2\n\
         Significant detection? *{notice['event']['significant']}* \n\
         Classification Probabilities: {notice['event']['classification']}\n\
-        BNS % : {notice['event']['classification']['BNS']}\n\
-        NSBH % : {notice['event']['classification']['NSBH']}\n\
         Most Likely Classification: {max(notice['event']['classification'], key=notice['event']['classification'].get)}\n\
         Has_NS: *{notice['event']['properties']['HasNS']}* \n\
         Has_Remnant: *{notice['event']['properties']['HasRemnant']}* \n\
