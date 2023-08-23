@@ -19,6 +19,7 @@ import sys
 import six
 import yagmail
 import traceback
+import datetime
 
 import voeventparse
 
@@ -117,10 +118,11 @@ def main():
     except Exception as e:                                                                           
         logger.info("problem with running frb code, now in exception block, emailing and raising error")
         logger.info(e) 
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         yag = yagmail.SMTP('chime.dummy', 'qynrwegcbiabqybd')
         contents = [f'Hi,\n There was an exception and the bot may not be runnning (FRB threw it). Please go to Vera to fix and start again!\n\n\
                     Output of the exception: {str(e)}\n\nFull Traceback:\n{traceback.format_exc()}']
-        yag.send('mdm2@andrew.cmu.edu', 'Listener may not be running', contents)
+        yag.send('mdm2@andrew.cmu.edu', f'Listener may not be running : {str(now)}', contents)
         raise
 
 def handle_voevent(event):

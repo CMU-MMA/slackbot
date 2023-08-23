@@ -22,7 +22,7 @@ TIME_AFTER_GW = datetime.timedelta(seconds=10000)
 #################################################
 
 def parse_gw( notice, skymap_bytes ):
-    #Preparing certain variable
+    #Preparing special variables
     far = 1./notice['event']['far'] / (3600.0 * 24 * 365.25)
     if far>100.0:
         far = float(str(int(np.round(far))))
@@ -37,6 +37,11 @@ def parse_gw( notice, skymap_bytes ):
             f"time_difference: {notice['external_coinc']['time_difference']} seconds,\n\t\t"\
             f"search:  {notice['external_coinc']['search']},\n\t\t"\
             f"joint FAR: 1 per {joint_far} years"
+        
+    max_likelihood = "NA"
+    if len(notice['event']['classification'])>0:
+        max_likelihood = max(notice['event']['classification'], key=notice['event']['classification'].get)
+
     
     superevent_id = notice["superevent_id"]
     gracedb = f"https://example.org/superevents/{superevent_id}/view"
@@ -69,7 +74,7 @@ def parse_gw( notice, skymap_bytes ):
         50% Area: *{gw_area_within( skymap_bytes, 0.5):.2f}* deg^2\n\
         Significant detection? *{notice['event']['significant']}* \n\
         Classification Probabilities: {notice['event']['classification']}\n\
-        Most Likely Classification: {max(notice['event']['classification'], key=notice['event']['classification'].get)}\n\
+        Most Likely Classification: {max_likelihood}\n\
         Has_NS: *{notice['event']['properties']['HasNS']}* \n\
         Has_Remnant: *{notice['event']['properties']['HasRemnant']}* \n\
         Has_Mass_Gap: {notice['event']['properties']['HasMassGap']}\n\

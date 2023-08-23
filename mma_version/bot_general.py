@@ -14,6 +14,7 @@ from slack_token import hop_username
 from slack_token import hop_pw
 import yagmail
 import traceback
+import datetime
 ####
 # Brendan needed to add this to fix an error "ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1056)"
 import ssl 
@@ -850,8 +851,9 @@ if __name__ == '__main__':
     except Exception as e:
         print("problem with running gw code, now in exception block, emailing and raising error")
         print(e) 
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         yag = yagmail.SMTP('chime.dummy', 'qynrwegcbiabqybd')
         contents = [f'Hi,\n There was an exception and the bot is now not runnning. Please go to Vera to fix and start again!\n\n\
                     Output of the exception: {str(e)}\n\nFull Traceback:\n{traceback.format_exc()}']
-        yag.send(['oconnorb@gwmail.Gwu.edu','mdm2@andrew.cmu.edu'], 'Listener is not running', contents)
+        yag.send(['oconnorb@gwmail.Gwu.edu','mdm2@andrew.cmu.edu'], f'Listener is not running : {str(now)}', contents)
         raise
