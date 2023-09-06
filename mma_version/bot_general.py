@@ -845,9 +845,11 @@ if __name__ == '__main__':
                         else:
                             print("Mock Event, ignoring the retraction.")
             
-            # If the event is not a mock and is not terrestrial, we call the gw/frb code
-                if message.content[0]['superevent_id'][0] != 'M' and message.content[0]['event']['classification']['Terrestrial'] < 0.5:
-                    gw_handler.main( message, slackbot )  
+            # If the event is not a mock, and is either modelled and not terrestrial, or a burst and quite rare,
+            #   less than 10 per year, then  we call the gw/frb code
+                if message.content[0]['superevent_id'][0] != 'M': 
+                    if (( instance['event']['group'] != "Burst" and message.content[0]['event']['classification']['Terrestrial'] < 0.5)) and (instance['event']['group'] == "Burst" and  message.content[0]['far'] < 10/(3600.0 * 24 * 365.25)):
+                        gw_handler.main( message, slackbot )  
     except Exception as e:
         print("problem with running gw code, now in exception block, emailing and raising error")
         print(e) 
