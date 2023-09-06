@@ -18,12 +18,12 @@ def safe_save_figure(fig, filename, logger, **kwargs):
         fig.savefig(fname=filename, **kwargs)
 
 
-def plot_skymap( filename, ra, dec, logger ):
+def plot_skymap( filename, frb_name, ra, dec, logger ):
     if filename is None or filename == "":
         logger.error("Please give a valid filename to read from")
         return ""
     fits_filename = filename
-    png_filename = fits_filename[:-5]+".png"
+    png_filename = fits_filename[:-5]+"_"+frb_name+".png"
     #logger.info(f"Writing image to {png_filename}")
 
 

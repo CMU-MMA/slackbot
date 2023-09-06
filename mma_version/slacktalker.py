@@ -18,7 +18,7 @@ def output( msg, end="\n" ):
     try:
         caller_path = sys._getframe(1).f_globals['__file__']
         caller_file = os.path.split(caller_path)[-1]
-        #if called by the gw/frb code (to keep output separate from main code)
+        #if called by the gw/frb code (to keep output seperate from main code)
         if caller_file == "frb_listener.py" or caller_file == "gw_listener.py":
             logger.info( msg )
         else:
@@ -80,7 +80,6 @@ class slack_bot:
             else: 
                 output("\nCould not post message. Error: ", e.response["error"])
 
-
     def post_message( self, title:str, message_text,  channel_name:str=None, _counter:int=0):
         if channel_name is None: channel_name = self.default_channel
         # This is a message with buttons and stuff. 
@@ -108,16 +107,15 @@ class slack_bot:
             else: 
                 output("\nCould not post message. Error: ", e.response["error"])
 
-    def post_skymap( self, file_name, ivorn, channel_name:str=None, _counter:int=0 ):
+    def post_skymap( self, file_name, event_id, ivorn, channel_name:str=None, _counter:int=0 ):
         if channel_name is None: channel_name = self.default_channel
         try:
             output(f"Trying to send skymap to {channel_name} channel...",end='')
-            event_name = os.path.split(file_name)[-1][:-4]
             response = self.client.files_upload_v2(
                 channel=self.name_to_id( channel_name ),
                 file=file_name,
                 title="Skymap of possible coincident events",
-                initial_comment=f"Skymap showing events {event_name} and {ivorn}",
+                initial_comment=f"Skymap showing events {event_id} and {ivorn}",
                 )
             output("Done")
         except SlackApiError as e:

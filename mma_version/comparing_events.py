@@ -41,6 +41,16 @@ def parse_gw( notice, skymap_bytes ):
     max_likelihood = "NA"
     if len(notice['event']['classification'])>0:
         max_likelihood = max(notice['event']['classification'], key=notice['event']['classification'].get)
+    
+    has_ns = "NA"
+    has_rem = "NA"
+    has_mg = "NA"
+    if "HasNS" in notice['event']['properties'].keys():
+        has_ns = notice['event']['properties']["HasNS"]
+    if "HasRemnant" in notice['event']['properties'].keys():
+        has_rem = notice['event']['properties']["HasRemnant"]
+    if "HasMassGap" in notice['event']['properties'].keys():
+        has_mg = notice['event']['properties']["HasMassGap"]
 
     
     superevent_id = notice["superevent_id"]
@@ -49,7 +59,7 @@ def parse_gw( notice, skymap_bytes ):
     img_link2 = f"https://gracedb.ligo.org/api/superevents/{superevent_id}/files/bayestar.volume.png"
     img_link3 = f"https://gracedb.ligo.org/api/superevents/{superevent_id}/files/bayestar.fits.gz"
     img_link4 = f"http://treasuremap.space/alerts?graceids={superevent_id}"
-
+    
     skymap = Table.read(BytesIO(skymap_bytes))
 
     try:
@@ -60,6 +70,13 @@ def parse_gw( notice, skymap_bytes ):
             skymap[np.argmax(skymap['PROBDENSITY'])]['UNIQ'])
     ra, dec = ah.healpix_to_lonlat(ipix, ah.level_to_nside(level),
                                    order='nested')
+
+    print(notice["alert_type"])
+    print(f"skymap mata distmean? -> \n{skymap.meta.keys()}")
+    
+    distance = "NA"
+    if all(x in skymap.meta.keys() for x in ['DISTMEAN', 'DISTSTD']):
+        distance = f"{skymap.meta['DISTMEAN']:7.2f} with error {skymap.meta['DISTSTD']:7.2f}"
 
     #Preparing message for slack #:7.2f
     message_text = f"Gravitational Wave Data: \n\n\
@@ -75,10 +92,10 @@ def parse_gw( notice, skymap_bytes ):
         Significant detection? *{notice['event']['significant']}* \n\
         Classification Probabilities: {notice['event']['classification']}\n\
         Most Likely Classification: {max_likelihood}\n\
-        Has_NS: *{notice['event']['properties']['HasNS']}* \n\
-        Has_Remnant: *{notice['event']['properties']['HasRemnant']}* \n\
-        Has_Mass_Gap: {notice['event']['properties']['HasMassGap']}\n\
-        Distance (Mpc): *{skymap.meta['DISTMEAN']:7.2f} with error {skymap.meta['DISTSTD']:7.2f}* \n\
+        Has_NS: *{has_ns}* \n\
+        Has_Remnant: *{has_rem}* \n\
+        Has_Mass_Gap: {has_mg} \n\
+        Distance (Mpc): *{distance}* \n\
         RA, DEC: {ra.deg}, {dec.deg} \n\
         Detection pipeline: {notice['event']['pipeline']}\n\
         Detection instruments: {notice['event']['instruments']}\n\
@@ -90,6 +107,7 @@ def parse_gw( notice, skymap_bytes ):
         Treasure Map Link: {img_link4} \n\
         "  
     return message_text
+
 
 def gw_area_within( skymap_bytes:bytes, prob:float ):
     assert prob < 1, "Enter `prob` parameter in decimal format"
@@ -140,17 +158,21 @@ def parse_frb( voevent ):
 
 #################################################
 
-def parse_message(gw_data, skymap_bytes, frb_data, odds):
+def parse_message(gw_data, skymap_bytes, frb_data, odds, time_difference):
     if type(odds) == str:
         message =  f"*Possible Associated Event*\n\
-        Odds of Common Source: {odds}\n\n\n\
+        Odds of Common Source: {odds}\n\n\
+        Temporal Difference: {time_difference}\n\n\n\
         {parse_gw(gw_data, skymap_bytes)}\n\n\
         {parse_frb(frb_data)}"
     else:
         message =  f"*Possible Associated Event*\n\
         Odds of Common Source:\n\
-            minimum FRB z: {odds[0]:.2E}\n\
-            maximum FRB z: {odds[1]:.2E}\n\n\n\
+            *for minimum FRB z: {odds[0]:.2E}*\n\
+            *for maximum FRB z: {odds[1]:.2E}*\n\
+                FRB pcs distance min, max:{odds[2]:.2E}, {odds[3]:.2E}\n\
+                GW z: {odds[4]:.2E} ± {odds[5]:.2E}\n\
+        Temporal Difference: {time_difference}\n\n\n\
         {parse_gw(gw_data, skymap_bytes)}\n\n\
         {parse_frb(frb_data)}"
     return message
@@ -242,6 +264,10 @@ def determine_relation( gw_data, frb_data, slackbot, logger ):
         logger.info("The events are within the defined plausible time region")
         logger.info(f"\tGW:  {gw_time}")
         logger.info(f"\tFRB: {frb_time}")
+        difference = f"FRB Preceeded GW by {(gw_time - frb_time)}"
+        if (frb_time > gw_time):
+            difference = f"GW Preceeded FRB by {(frb_time - gw_time)}"
+        logger.info(f"\t{difference}")
         if 'skymap' in gw_data['event'].keys():
             #logger.info("has skymap")
             skymap_bytes = gw_data.get('event', {}).pop('skymap')
@@ -250,30 +276,33 @@ def determine_relation( gw_data, frb_data, slackbot, logger ):
                 frb_ra, frb_dec, frb_error = frb_location( frb_data )
                 dm = vp.get_grouped_params(frb_data)['event parameters']['dm']['value']
                 odds = calculate_odds(skymap_bytes, frb_ra, frb_dec, frb_error, frb_pixel, float(dm), np.abs((TIME_BEFORE_GW + TIME_AFTER_GW)/ datetime.timedelta(days=1)), logger)
-                message = parse_message(gw_data, skymap_bytes, frb_data, odds)
-                image_filename = plot_skymap( get_skymap_name( gw_data, logger ), frb_ra, frb_dec, logger)
+                message = parse_message(gw_data, skymap_bytes, frb_data, odds, difference)
+                image_filename = plot_skymap( get_skymap_name( gw_data, logger ), get_xml_filename(frb_data.attrib['ivorn'], logger), frb_ra, frb_dec, logger)
                 
                 slackbot.post_message( "GW-FRB Coincidence Found", message)
                 if image_filename != "":
-                    slackbot.post_skymap( image_filename, f"ivo:// {frb_data.attrib['ivorn'][6:]}")
+                    slackbot.post_skymap( image_filename, gw_data['superevent_id'], f"ivo:// {frb_data.attrib['ivorn'][6:]}")
                     os.remove(image_filename)
                 return True
         else:
             logger.info("Does not have skymap")
     else:
-        logger.info("The events are NOT within the defined plausible time region")
         # Deleting file outside of the time range (one is guaranteed to be within
         #    as it just triggered)
         filename = None
+        removed = True
         if ( gw_time < frb_time ):
             # GW came first (is too old)
             filename = os.path.join("GW_Avros", gw_data['superevent_id']+".avro")
-            os.remove(filename)
+            if os.path.exists(filename): os.remove(filename)
+            else: removed = False
         else:
             pass
             # FRB came first (is too old)
             filename = os.path.join("FRB_XMLs", get_xml_filename(frb_data.attrib["ivorn"],logger)+".xml")
-            os.remove(filename) 
-        logger.info(f"Removed {filename}")
+            if os.path.exists(filename): os.remove(filename) 
+            else: removed = False
+        if removed: logger.info(f"Removed {filename}")
+        else: logger.info("passed on event")
     return False
 

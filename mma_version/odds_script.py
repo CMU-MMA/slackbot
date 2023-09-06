@@ -121,11 +121,12 @@ def distance_overlap( gw_skymap, DM, frb_index, frb_ra, frb_dec ):
     N = gw_skymap["DISTNORM"][frb_index]
     sigma = gw_skymap["DISTSIGMA"][frb_index]
     mu = gw_skymap["DISTMU"][frb_index]
-    r = dL_from_DM(DM, frb_ra, frb_dec)
+    r_min, r_max = dL_from_DM(DM, frb_ra, frb_dec)
 
     # Equation (1) of above paper
-    I_DL = N * stats.norm(loc=mu, scale=sigma).pdf(r) 
-    return I_DL
+    I_DL_min = N * stats.norm(loc=mu, scale=sigma).pdf(r_min) 
+    I_DL_max = N * stats.norm(loc=mu, scale=sigma).pdf(r_max) 
+    return I_DL_min, I_DL_max, r_min, r_max, mu, sigma
 
 def calculate_odds(gw_skymap_bytes:bytes, frb_ra, frb_dec, frb_error, frb_index, DM, search_span:float, logger):
     '''Determine odds of common source for a GW and FRB, specific to
@@ -161,7 +162,7 @@ def calculate_odds(gw_skymap_bytes:bytes, frb_ra, frb_dec, frb_error, frb_index,
     R_em = 1.6 # day^-1
     del_t = search_span # day 
     try:
-        I_DL_min, I_DL_max = distance_overlap(Table.read(BytesIO(gw_skymap_bytes)), DM, frb_index, frb_ra, frb_dec)
+        I_DL_min, I_DL_max, r_min, r_max, mu, sigma = distance_overlap(Table.read(BytesIO(gw_skymap_bytes)), DM, frb_index, frb_ra, frb_dec)
         #I_omega = skymap_overlap_integral(create_external_skymap(frb_ra, frb_dec, frb_error), Table.read(BytesIO(gw_skymap_bytes)))
         gw_skymap = Table.read(BytesIO(gw_skymap_bytes))
         I_omega = skymap_overlap_integral(
@@ -171,7 +172,7 @@ def calculate_odds(gw_skymap_bytes:bytes, frb_ra, frb_dec, frb_error, frb_index,
             se_nested = True,
             ext_nested = False)
 
-        return (1/(R_em * del_t) * I_DL_min * I_omega, 1/(R_em * del_t) * I_DL_max * I_omega)
+        return (1/(R_em * del_t) * I_DL_min * I_omega, 1/(R_em * del_t) * I_DL_max * I_omega, r_min, r_max, mu, sigma)
     except AssertionError as e:
         logger.info("Unable to calculate odds: "+str(e))
         return "events missing required data"

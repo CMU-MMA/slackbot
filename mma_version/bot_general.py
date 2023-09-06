@@ -12,6 +12,7 @@ from hop.auth import Auth
 from slacktalker import slack_bot
 from slack_token import hop_username
 from slack_token import hop_pw
+import gw_handler
 import yagmail
 import traceback
 import datetime
@@ -37,9 +38,6 @@ from ligo.skymap.moc import uniq2pixarea
 ############################################################
 # Look into running on spin @ nersc:
 # https://www.nersc.gov/systems/spin/
-############################################################
-# importing potion of GW/FRB system (also need to seperately call twistd comet for frb)
-import gw_handler 
 ############################################################
 #Charlie Kilpatrick's Code for Parsing the Alert (https://github.com/charliekilpatrick/bot):
 def most_likely_classification(classification):
@@ -236,7 +234,6 @@ if __name__ == '__main__':
     stream = Stream(auth=auth, start_at=start_pos, )
 
     try:
-            
         with stream.open("kafka://kafka.scimma.org/igwn.gwalert", "r") as s:
 
             print("\n\nHop Skotch stream open. Creating Slack client...\n\n")
@@ -844,18 +841,17 @@ if __name__ == '__main__':
 
                         else:
                             print("Mock Event, ignoring the retraction.")
-            
-            # If the event is not a mock, and is either modelled and not terrestrial, or a burst and quite rare,
-            #   less than 10 per year, then  we call the gw/frb code
-                if message.content[0]['superevent_id'][0] != 'M': 
-                    if (( instance['event']['group'] != "Burst" and message.content[0]['event']['classification']['Terrestrial'] < 0.5)) and (instance['event']['group'] == "Burst" and  message.content[0]['far'] < 10/(3600.0 * 24 * 365.25)):
-                        gw_handler.main( message, slackbot )  
+                # If the event is not a mock, and is either modelled and not terrestrial, or a burst and quite rare,
+                #   less than 10 per year, then  we call the gw/frb code
+                    if message.content[0]['superevent_id'][0] != 'M': 
+                        if (( instance['event']['group'] != "Burst" and message.content[0]['event']['classification']['Terrestrial'] < 0.5)) and (instance['event']['group'] == "Burst" and  message.content[0]['far'] < 10/(3600.0 * 24 * 365.25)):
+                            gw_handler.main( message, slackbot )  
     except Exception as e:
         print("problem with running gw code, now in exception block, emailing and raising error")
         print(e) 
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         yag = yagmail.SMTP('chime.dummy', 'qynrwegcbiabqybd')
         contents = [f'Hi,\n There was an exception and the bot is now not runnning. Please go to Vera to fix and start again!\n\n\
-                    Output of the exception: {str(e)}\n\nFull Traceback:\n{traceback.format_exc()}']
-        yag.send(['oconnorb@gwmail.Gwu.edu','mdm2@andrew.cmu.edu'], f'Listener is not running : {str(now)}', contents)
+                    Output of the exception: {type(e).__name__}: {e.args}\n\nFull Traceback:\n{traceback.format_exc()}']
+        yag.send(['oconnorb@gmail.Gwu.edu','mdm2@andrew.cmu.edu'], f'Listener is not running : {str(now)}', contents)
         raise

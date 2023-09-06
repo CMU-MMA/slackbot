@@ -121,7 +121,7 @@ def main():
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         yag = yagmail.SMTP('chime.dummy', 'qynrwegcbiabqybd')
         contents = [f'Hi,\n There was an exception and the bot may not be runnning (FRB threw it). Please go to Vera to fix and start again!\n\n\
-                    Output of the exception: {str(e)}\n\nFull Traceback:\n{traceback.format_exc()}']
+                    Output of the exception: {type(e).__name__}: {e.args}\n\nFull Traceback:\n{traceback.format_exc()}']
         yag.send('mdm2@andrew.cmu.edu', f'Listener may not be running : {str(now)}', contents)
         raise
 

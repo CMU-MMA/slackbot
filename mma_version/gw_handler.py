@@ -1,16 +1,7 @@
 from os import sep as SEP
 import os
 os.environ['NUMEXPR_MAX_THREADS'] = '4' #to stop log warning
-import sys
-import logging
 from time import sleep
-import yagmail
-import traceback
-
-from hop import Stream
-from hop.io import StartPosition
-from pprint import pprint
-from hop.auth import Auth 
 
 from slacktalker import slack_bot
 from reading_writing import (
@@ -105,6 +96,7 @@ def store_file( message ):
         logger.info(f"NEW WRITE of event {message.content[0]['superevent_id']}")
         write_avro_file( message, logger )
             
+  
 
 def main( message, slackbot ):
 

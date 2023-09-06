@@ -33,7 +33,7 @@ def read_lock( file_name ):
         with lock.read_lock():
             yield
     finally:
-        os.remove(lock_file)
+        if os.path.isfile(lock_file): os.remove(lock_file)
 @contextmanager
 def write_lock( file_name ):
     lock_file = f'{file_name}.lock'
@@ -42,7 +42,7 @@ def write_lock( file_name ):
         with lock.write_lock():
             yield
     finally:
-        os.remove(lock_file)
+        if os.path.isfile(lock_file): os.remove(lock_file)
 
 # GENERAL FUNCTIONS #######################################
 
