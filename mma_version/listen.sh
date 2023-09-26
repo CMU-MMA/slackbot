@@ -14,7 +14,7 @@ echo -e "\nTemporary files to be saved to \n\t$frb_save_directory \n\t$gw_save_d
 # Set up Chime (no -n flag so it daemonises)
 echo -e "setting up CHIME/FRB twistd comet broker\n"
 twistd comet --remote=chimefrb.physics.mcgill.ca --local-ivo=ivo://test_user/test \
-    --cmd=./frb_listener.py
+    --cmd=./frb_handler.py
 
 sleep 2
 

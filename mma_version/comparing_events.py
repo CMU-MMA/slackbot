@@ -170,8 +170,8 @@ def parse_message(gw_data, skymap_bytes, frb_data, odds, time_difference):
         Odds of Common Source:\n\
             *for minimum FRB z: {odds[0]:.2E}*\n\
             *for maximum FRB z: {odds[1]:.2E}*\n\
-                FRB pcs distance min, max:{odds[2]:.2E}, {odds[3]:.2E}\n\
-                GW z: {odds[4]:.2E} ± {odds[5]:.2E}\n\
+                FRB pcs distance min, max: {odds[2]:.0f}, {odds[3]:.0f}\n\
+                GW pcs distance: {odds[4]:.0f} ± {odds[5]:.2f}\n\
         Temporal Difference: {time_difference}\n\n\n\
         {parse_gw(gw_data, skymap_bytes)}\n\n\
         {parse_frb(frb_data)}"
