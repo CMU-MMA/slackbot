@@ -120,9 +120,9 @@ def main():
         logger.info(e) 
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         yag = yagmail.SMTP('chime.dummy', 'qynrwegcbiabqybd')
-        contents = [f'Hi,\n There was an exception and the bot may not be runnning (FRB threw it). Please go to Vera to fix and start again!\n\n\
+        contents = [f'Hi,\n There was an exception but the bot is still running (FRB threw it). Please go to Vera to fix and start again!\n\n\
                     Output of the exception: {type(e).__name__}: {e.args}\n\nFull Traceback:\n{traceback.format_exc()}']
-        yag.send('mdm2@andrew.cmu.edu', f'Listener may not be running : {str(now)}', contents)
+        yag.send('mdm2@andrew.cmu.edu', f'Listener error, still running : {str(now)}', contents)
         raise
 
 def handle_voevent(event):
@@ -135,7 +135,8 @@ def handle_voevent(event):
     if event.attrib["role"] == 'test':
         logger.info("Test notice, not handling")
     else:
-        archive_xml( event )
+        # no longer saving all voevent (eventually get OSERROR: disk quota exceeded)
+        #archive_xml( event )
         if event.attrib["ivorn"][22:36] == "OBS-RETRACTION":
             logger.info("This is a retraction")
             #Looking for old notice, deleting if found

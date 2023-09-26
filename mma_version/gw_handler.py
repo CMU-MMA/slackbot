@@ -77,8 +77,8 @@ def deal_with_retraction( content, slackbot ):
         logger.info("Did not delete anything")
 
 def store_file( message ):
-    # Always storing skymap, should overwrite if it is an update
-    save_skymap( message.content[0] )
+    # not saving all skymaps (someone used them over the summer, but not sure if they still are)
+    #save_skymap( message.content[0] )
     
     if message.content[0]["alert_type"] =="EARLYWARNING":
         write_avro_file( message, logger )
